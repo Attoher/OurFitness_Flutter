@@ -114,17 +114,18 @@ class _SportSelectionSheetState extends State<SportSelectionSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 children: [
                   if (_filteredCardio.isNotEmpty) ...[
-                    _SectionLabel(label: 'CARDIO'),
+                    const _SectionLabel(label: 'CARDIO'),
                     const SizedBox(height: 8),
                     ..._filteredCardio.map((s) => _SportTile(
                           sport: s,
                           isSelected: _selectedSport == s.name,
                           onTap: () {
                             setState(() => _selectedSport = s.name);
+                            final navigator = Navigator.of(context);
                             Future.delayed(const Duration(milliseconds: 200), () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
+                              if (!mounted) return;
+                              navigator.pop();
+                              navigator.push(
                                 MaterialPageRoute(
                                   builder: (_) => WarmupScreen(sport: s),
                                 ),
@@ -135,17 +136,18 @@ class _SportSelectionSheetState extends State<SportSelectionSheet> {
                     const SizedBox(height: 16),
                   ],
                   if (_filteredStrength.isNotEmpty) ...[
-                    _SectionLabel(label: 'STRENGTH'),
+                    const _SectionLabel(label: 'STRENGTH'),
                     const SizedBox(height: 8),
                     ..._filteredStrength.map((s) => _SportTile(
                           sport: s,
                           isSelected: _selectedSport == s.name,
                           onTap: () {
                             setState(() => _selectedSport = s.name);
+                            final navigator = Navigator.of(context);
                             Future.delayed(const Duration(milliseconds: 200), () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
+                              if (!mounted) return;
+                              navigator.pop();
+                              navigator.push(
                                 MaterialPageRoute(
                                   builder: (_) => WarmupScreen(sport: s),
                                 ),

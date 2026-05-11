@@ -26,7 +26,6 @@ class AppTheme {
         primary: accent,
         secondary: Color(0xFF4CD8D8),
         surface: surface,
-        background: background,
       ),
       fontFamily: 'SF Pro Display',
       appBarTheme: const AppBarTheme(

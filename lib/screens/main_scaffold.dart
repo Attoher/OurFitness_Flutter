@@ -75,8 +75,8 @@ class _OurFitnessNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 72 + MediaQuery.of(context).padding.bottom,
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414),
+      decoration: const BoxDecoration(
+        color: Color(0xFF141414),
         border: Border(
           top: BorderSide(color: AppTheme.surfaceLight, width: 0.5),
         ),
@@ -87,54 +87,39 @@ class _OurFitnessNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _NavItem(
-              icon: Icons.home_rounded,
-              label: 'Home',
+              icon: Icons.home_outlined,
               isActive: currentIndex == 0,
               onTap: () => onTap(0),
             ),
             _NavItem(
-              icon: Icons.star_rounded,
-              label: 'Awards',
+              icon: Icons.verified_user_outlined,
               isActive: currentIndex == 1,
               onTap: () => onTap(1),
             ),
-            // Center FAB
+            // Center Running Button
             GestureDetector(
               onTap: () => onTap(2),
               child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.accent, AppTheme.accentDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2C2C2E),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.accent.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: const Icon(
-                  Icons.add_rounded,
-                  color: AppTheme.background,
-                  size: 30,
+                  Icons.directions_run_rounded,
+                  color: Colors.white,
+                  size: 28,
                 ),
               ),
             ),
             _NavItem(
-              icon: Icons.bar_chart_rounded,
-              label: 'Stats',
+              icon: Icons.insert_chart_outlined_rounded,
               isActive: currentIndex == 3,
               onTap: () => onTap(3),
             ),
             _NavItem(
-              icon: Icons.person_rounded,
-              label: 'Profile',
+              icon: Icons.person_outline_rounded,
               isActive: currentIndex == 4,
               onTap: () => onTap(4),
             ),
@@ -147,13 +132,11 @@ class _OurFitnessNavBar extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
-  final String label;
   final bool isActive;
   final VoidCallback onTap;
 
   const _NavItem({
     required this.icon,
-    required this.label,
     required this.isActive,
     required this.onTap,
   });
@@ -164,30 +147,14 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
+        width: 48,
         height: 56,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                icon,
-                size: 24,
-                color: isActive ? AppTheme.accent : const Color(0xFF555555),
-              ),
-            ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? AppTheme.accent : const Color(0xFF555555),
-              ),
-              child: Text(label),
-            ),
-          ],
+        child: Center(
+          child: Icon(
+            icon,
+            size: 26,
+            color: isActive ? AppTheme.accent : const Color(0xFF555555),
+          ),
         ),
       ),
     );

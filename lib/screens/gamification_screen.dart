@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../services/fitness_service.dart';
 
 class GamificationScreen extends StatelessWidget {
   const GamificationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final fitnessData = context.watch<FitnessService>();
+    
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _buildStreakCard(context)),
-            SliverToBoxAdapter(child: _buildBadgesSection(context)),
-            SliverToBoxAdapter(child: _buildChallengesSection(context)),
+            SliverToBoxAdapter(child: _buildHeader(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildStreakCard(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildBadgesSection(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildChallengesSection(context, fitnessData)),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
@@ -22,24 +26,52 @@ class GamificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Achievements', style: Theme.of(context).textTheme.displaySmall),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Achievements', style: Theme.of(context).textTheme.displaySmall),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Level ${data.level}',
+                    style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  Text(
+                    '${data.xp}/${data.xpNextLevel} XP',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(
             'Keep pushing your limits!',
             style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: data.levelProgress,
+              backgroundColor: AppTheme.surface,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
+              minHeight: 4,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStreakCard(BuildContext context) {
+  Widget _buildStreakCard(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
@@ -60,10 +92,10 @@ class GamificationScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   children: [
                     Icon(Icons.local_fire_department_rounded, color: AppTheme.background, size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(
                       'Current Streak',
                       style: TextStyle(
@@ -76,8 +108,8 @@ class GamificationScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '3 Weeks',
-                  style: TextStyle(
+                  '${data.streak} Weeks',
+                  style: const TextStyle(
                     color: AppTheme.background,
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
@@ -85,7 +117,7 @@ class GamificationScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '21 days in a row!',
+                  '${data.streak * 7} days in a row!',
                   style: TextStyle(
                     color: AppTheme.background.withValues(alpha: 0.7),
                     fontSize: 12,
@@ -111,15 +143,8 @@ class GamificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgesSection(BuildContext context) {
-    final badges = [
-      {'icon': Icons.directions_run_rounded, 'title': 'First Run', 'desc': 'Completed', 'done': true},
-      {'icon': Icons.local_fire_department_rounded, 'title': '7-Day Streak', 'desc': 'Completed', 'done': true},
-      {'icon': Icons.fitness_center_rounded, 'title': '10K Steps', 'desc': 'Completed', 'done': true},
-      {'icon': Icons.directions_walk_rounded, 'title': '5K Run', 'desc': 'Completed', 'done': true},
-      {'icon': Icons.bedtime_rounded, 'title': '8h Sleep', 'desc': 'In progress', 'done': false},
-      {'icon': Icons.bolt_rounded, 'title': 'HIIT Hero', 'desc': 'Locked', 'done': false},
-    ];
+  Widget _buildBadgesSection(BuildContext context, FitnessService data) {
+    final badges = data.badges;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -141,7 +166,7 @@ class GamificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildChallengesSection(BuildContext context) {
+  Widget _buildChallengesSection(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -151,26 +176,26 @@ class GamificationScreen extends StatelessWidget {
           const SizedBox(height: 14),
           _ChallengeCard(
             icon: Icons.directions_walk_rounded,
-            title: 'Run 20km this week',
-            progress: 0.26,
-            current: '5.2 km',
-            goal: '20 km',
+            title: 'Weekly Steps Goal',
+            progress: data.stepsProgress,
+            current: '${data.steps} steps',
+            goal: '${data.stepsGoal} steps',
           ),
           const SizedBox(height: 10),
           _ChallengeCard(
             icon: Icons.local_fire_department_rounded,
-            title: 'Burn 3000 calories',
-            progress: 0.5,
-            current: '1500 kcal',
-            goal: '3000 kcal',
+            title: 'Weekly Calories Goal',
+            progress: data.caloriesProgress,
+            current: '${data.calories} kcal',
+            goal: '${data.caloriesGoal} kcal',
           ),
           const SizedBox(height: 10),
           _ChallengeCard(
-            icon: Icons.water_drop_rounded,
-            title: 'Train 5 days this week',
-            progress: 0.6,
-            current: '3 days',
-            goal: '5 days',
+            icon: Icons.timer_rounded,
+            title: 'Move Minutes Goal',
+            progress: data.moveMinutesProgress,
+            current: '${data.moveMinutes} min',
+            goal: '${data.moveMinutesGoal} min',
           ),
         ],
       ),
@@ -263,7 +288,7 @@ class _ChallengeCard extends StatelessWidget {
               ),
               Text(
                 '${(progress * 100).toInt()}%',
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.accent,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -294,3 +319,4 @@ class _ChallengeCard extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/fitness_service.dart';
 import '../theme/app_theme.dart';
 
 class NotificationsScreen extends StatelessWidget {
@@ -6,6 +8,9 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fitnessData = context.watch<FitnessService>();
+    final notifications = fitnessData.notifications;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -15,28 +20,35 @@ class NotificationsScreen extends StatelessWidget {
           child: const Icon(Icons.chevron_left_rounded, size: 28),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        children: const [
-          _NotificationItem(
-            icon: Icons.workspace_premium_rounded,
-            title: 'Streak Level Up: Week 4!',
-            body:
-                "Consistent and unstoppable! You've officially hit a 4-week winning streak. Let's keep this energy going!",
-            time: 'Apr 17',
-            isNew: true,
-          ),
-          SizedBox(height: 10),
-          _NotificationItem(
-            icon: Icons.local_fire_department_rounded,
-            title: 'Save your 3-week streak!',
-            body:
-                "You're one session away from keeping your streak alive. Complete your workout before the week ends!",
-            time: 'Apr 15',
-            isNew: false,
-          ),
-        ],
-      ),
+      body: notifications.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.notifications_none_rounded, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No notifications yet',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final item = notifications[index];
+                return _NotificationItem(
+                  icon: item['icon'] as IconData,
+                  title: item['title'] as String,
+                  body: item['body'] as String,
+                  time: item['time'] as String,
+                  isNew: item['isNew'] as bool,
+                );
+              },
+            ),
     );
   }
 }
@@ -73,7 +85,7 @@ class _NotificationItem extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.surfaceLight,
               shape: BoxShape.circle,
             ),

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
+import '../services/fitness_service.dart';
 
 class RunningTrackerScreen extends StatefulWidget {
   final Sport sport;
@@ -46,6 +48,15 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
 
   void _finishWorkout() {
     _timer?.cancel();
+    
+    // Save to FitnessService
+    final fitness = context.read<FitnessService>();
+    fitness.addWorkoutResult(
+      calories: _calories,
+      steps: (_distanceKm * 1300).round(), // 1km approx 1300 steps
+      durationMinutes: _elapsedSeconds ~/ 60,
+    );
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -153,7 +164,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
                           child: Container(
                             width: 40,
                             height: 40,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppTheme.accent,
                               shape: BoxShape.circle,
                             ),
@@ -169,125 +180,84 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
           ),
           // Stats panel
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
             decoration: const BoxDecoration(
               color: Color(0xFF141414),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
             ),
             child: SafeArea(
               top: false,
               child: Column(
                 children: [
-                  // Sport label
+                  // Title
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const SizedBox(width: 24),
                       Text(
-                        widget.sport.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.open_in_full_rounded,
-                        color: AppTheme.textSecondary,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Main stats row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _TrackerStat(
-                        label: 'Duration',
-                        value: _formattedTime,
-                        unit: '',
-                      ),
-                      _TrackerDivider(),
-                      _TrackerStat(
-                        label: 'Distance (km)',
-                        value: _distanceKm.toStringAsFixed(2),
-                        unit: 'km',
-                      ),
-                      _TrackerDivider(),
-                      _TrackerStat(
-                        label: 'Pace/km',
-                        value: _pace,
-                        unit: 'min/km',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Secondary stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Heart rate
-                      Row(
-                        children: [
-                          const Icon(Icons.favorite_rounded, color: AppTheme.heartRate, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$_heartRate',
-                            style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 18,
+                        'Running',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w700,
+                              fontSize: 22,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          _HeartRateBar(bpm: _heartRate),
-                        ],
                       ),
-                      // Calories
-                      Row(
-                        children: [
-                          const Icon(Icons.local_fire_department_rounded,
-                              color: AppTheme.accent, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$_calories',
-                            style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text('KCAL',
-                              style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-                        ],
+                      const SizedBox(width: 8),
+                      const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 18),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Stats Grid
+                  Row(
+                    children: [
+                      Expanded(child: _StatCard(value: _formattedTime, label: 'Time')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _StatCard(value: _distanceKm.toStringAsFixed(2).replaceAll('.', ','), label: 'Distance (km)')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _StatCard(value: _pace, label: 'Pace (/km)')),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: _StatCard(
+                          value: '$_heartRate',
+                          label: 'Heart Rate (bpm)',
+                          extra: _HeartRateBar(bpm: _heartRate),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(value: '$_calories', label: 'Calories (kcal)'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  // Pause/Resume button
+                  const SizedBox(height: 32),
+                  // Pause button
                   GestureDetector(
                     onTap: _toggleRunning,
                     child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: _isRunning ? AppTheme.accent : AppTheme.surface,
+                      width: 80,
+                      height: 80,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.accent,
                         shape: BoxShape.circle,
-                        boxShadow: _isRunning
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.accent.withValues(alpha: 0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 4),
-                                )
-                              ]
-                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x4DCBEF43), // AppTheme.accent with alpha
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          )
+                        ],
                       ),
                       child: Icon(
                         _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: _isRunning ? AppTheme.background : AppTheme.textPrimary,
-                        size: 30,
+                        color: Colors.black,
+                        size: 40,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -302,7 +272,7 @@ class _MapPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1A2030),
+      color: const Color(0xFF141D2C),
       child: Stack(
         children: [
           // Grid lines
@@ -310,21 +280,63 @@ class _MapPlaceholder extends StatelessWidget {
             size: Size.infinite,
             painter: _MapGridPainter(),
           ),
+          // Map Labels
+          const Positioned(
+            top: 100,
+            left: 100,
+            child: _MapLabel(text: 'Red Square'),
+          ),
+          const Positioned(
+            top: 200,
+            right: 80,
+            child: _MapLabel(text: 'taman sipil'),
+          ),
+          const Positioned(
+            bottom: 300,
+            left: 60,
+            child: _MapLabel(text: 'Raman BAAK-ITS', isHighlight: true),
+          ),
+          const Positioned(
+            bottom: 250,
+            right: 40,
+            child: _MapLabel(text: 'Monumen Titik Nol ITS', isHighlight: true),
+          ),
           // Route path
           CustomPaint(
             size: Size.infinite,
             painter: _RoutePainter(),
           ),
-          // Location pin
-          const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_on_rounded, size: 28, color: AppTheme.accent),
-              ],
-            ),
+          // Location pins
+          Positioned(
+            bottom: 280,
+            right: 150,
+            child: Icon(Icons.location_on, color: Colors.purple.shade300, size: 24),
+          ),
+          Positioned(
+            top: 150,
+            right: 100,
+            child: Icon(Icons.location_on, color: Colors.yellow.shade300, size: 24),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MapLabel extends StatelessWidget {
+  final String text;
+  final bool isHighlight;
+
+  const _MapLabel({required this.text, this.isHighlight = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: isHighlight ? const Color(0xFFCBEF43).withValues(alpha: 0.8) : Colors.grey.withValues(alpha: 0.5),
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -333,17 +345,34 @@ class _MapPlaceholder extends StatelessWidget {
 class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 0.5;
+    final roadPaint = Paint()
+      ..color = const Color(0xFF2C3E50).withValues(alpha: 0.3)
+      ..strokeWidth = 10
+      ..style = PaintingStyle.stroke;
 
-    const spacing = 40.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
+    final roadPaintThin = Paint()
+      ..color = const Color(0xFF34495E).withValues(alpha: 0.2)
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke;
+
+    // Simulate roads
+    final path = Path()
+      ..moveTo(0, 100)
+      ..lineTo(size.width, 150)
+      ..moveTo(100, 0)
+      ..lineTo(120, size.height)
+      ..moveTo(size.width * 0.7, 0)
+      ..lineTo(size.width * 0.8, size.height);
+    
+    canvas.drawPath(path, roadPaintThin);
+
+    final path2 = Path()
+      ..moveTo(size.width * 0.2, 0)
+      ..quadraticBezierTo(size.width * 0.5, size.height * 0.5, size.width * 0.8, size.height)
+      ..moveTo(0, size.height * 0.7)
+      ..lineTo(size.width, size.height * 0.6);
+    
+    canvas.drawPath(path2, roadPaint);
   }
 
   @override
@@ -354,8 +383,15 @@ class _RoutePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.accent
-      ..strokeWidth = 4
+      ..color = const Color(0xFF8B4513) // Brownish/Orange path
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final glowPaint = Paint()
+      ..color = const Color(0xFF8B4513).withValues(alpha: 0.3)
+      ..strokeWidth = 12
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
@@ -364,68 +400,68 @@ class _RoutePainter extends CustomPainter {
     final cy = size.height / 2;
 
     final path = Path()
-      ..moveTo(cx - 60, cy + 80)
-      ..lineTo(cx - 80, cy)
-      ..lineTo(cx - 40, cy - 60)
-      ..lineTo(cx + 20, cy - 80)
-      ..lineTo(cx + 80, cy - 40)
-      ..lineTo(cx + 60, cy + 40)
-      ..lineTo(cx, cy + 80);
+      ..moveTo(cx - 100, cy + 150)
+      ..lineTo(cx - 120, cy + 50)
+      ..lineTo(cx - 80, cy - 50)
+      ..lineTo(cx + 50, cy - 80)
+      ..lineTo(cx + 120, cy - 40)
+      ..lineTo(cx + 120, cy + 100)
+      ..lineTo(cx + 20, cy + 120);
 
+    canvas.drawPath(path, glowPaint);
     canvas.drawPath(path, paint);
 
-    // Current position dot
-    canvas.drawCircle(
-      Offset(cx, cy + 80),
-      8,
-      Paint()..color = AppTheme.accent,
-    );
-    canvas.drawCircle(
-      Offset(cx, cy + 80),
-      14,
-      Paint()
-        ..color = AppTheme.accent.withValues(alpha: 0.3)
-        ..style = PaintingStyle.fill,
-    );
+    // Current position
+    final headPaint = Paint()..color = const Color(0xFF3498DB); // Blue head
+    canvas.drawCircle(Offset(cx + 20, cy + 120), 8, headPaint);
+    canvas.drawCircle(Offset(cx + 20, cy + 120), 14, Paint()..color = const Color(0xFF3498DB).withValues(alpha: 0.3));
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _TrackerStat extends StatelessWidget {
-  final String label;
+class _StatCard extends StatelessWidget {
   final String value;
-  final String unit;
+  final String label;
+  final Widget? extra;
 
-  const _TrackerStat({required this.label, required this.value, required this.unit});
+  const _StatCard({required this.value, required this.label, this.extra});
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value,
-            style: const TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            )),
-        Text(label,
-            style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-      ],
-    );
-  }
-}
-
-class _TrackerDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1,
-      height: 36,
-      color: AppTheme.surfaceLight,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (extra != null) ...[
+            const SizedBox(height: 4),
+            extra!,
+          ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -437,35 +473,37 @@ class _HeartRateBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zones = [
-      {'label': 'Zone 1', 'color': Colors.blue, 'range': [0, 100]},
-      {'label': 'Zone 2', 'color': Colors.green, 'range': [100, 120]},
-      {'label': 'Zone 3', 'color': Colors.yellow, 'range': [120, 140]},
-      {'label': 'Zone 4', 'color': Colors.orange, 'range': [140, 160]},
-      {'label': 'Zone 5', 'color': Colors.red, 'range': [160, 200]},
-    ];
+    return Container(
+      height: 8,
+      width: 100,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _segment(Colors.green.withValues(alpha: 0.5), true)),
+          const SizedBox(width: 2),
+          Expanded(child: _segment(Colors.green, false)),
+          const SizedBox(width: 2),
+          Expanded(child: _segment(Colors.yellow, false)),
+          const SizedBox(width: 2),
+          Expanded(child: _segment(Colors.orange, false)),
+          const SizedBox(width: 2),
+          Expanded(child: _segment(Colors.red, false, true)),
+        ],
+      ),
+    );
+  }
 
-    Color activeColor = Colors.red;
-    for (final z in zones) {
-      final range = z['range'] as List<int>;
-      if (bpm >= range[0] && bpm < range[1]) {
-        activeColor = z['color'] as Color;
-        break;
-      }
-    }
-
-    return Row(
-      children: List.generate(5, (i) {
-        return Container(
-          width: 4,
-          height: 12 + i * 3.0,
-          margin: const EdgeInsets.only(right: 2),
-          decoration: BoxDecoration(
-            color: i <= 3 ? activeColor : AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        );
-      }),
+  Widget _segment(Color color, [bool first = false, bool last = false]) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.horizontal(
+          left: first ? const Radius.circular(4) : Radius.zero,
+          right: last ? const Radius.circular(4) : Radius.zero,
+        ),
+      ),
     );
   }
 }

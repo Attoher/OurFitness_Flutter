@@ -14,7 +14,7 @@ class WarmupScreen extends StatefulWidget {
 }
 
 class _WarmupScreenState extends State<WarmupScreen> {
-  int _totalSeconds = 30;
+  final int _totalSeconds = 30;
   int _remainingSeconds = 30;
   bool _isPlaying = true;
   Timer? _timer;
@@ -245,7 +245,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: _goToTracker,
-                    child: Text(
+                    child: const Text(
                       'Skip warming-up',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
@@ -278,7 +278,7 @@ class _ControlButton extends StatelessWidget {
       child: Container(
         width: 48,
         height: 48,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppTheme.surface,
           shape: BoxShape.circle,
         ),

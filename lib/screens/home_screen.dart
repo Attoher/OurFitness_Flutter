@@ -1,24 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/activity_rings.dart';
+import '../services/fitness_service.dart';
 import 'notifications_screen.dart';
 import 'sport_selection_screen.dart';
+import '../widgets/week_day_strip.dart';
+
+import '../services/auth_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final fitnessData = context.watch<FitnessService>();
+    final authService = context.watch<AuthService>();
+    final user = authService.user;
+    final userName = user?.displayName ?? fitnessData.displayName;
+    
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _buildStreakSection(context)),
-            SliverToBoxAdapter(child: _buildActivityRings(context)),
-            SliverToBoxAdapter(child: _buildStats(context)),
-            SliverToBoxAdapter(child: _buildHealthCards(context)),
+            SliverToBoxAdapter(child: _buildHeader(context, userName, fitnessData)),
+            SliverToBoxAdapter(child: _buildStreakSection(context, fitnessData.streak)),
+            SliverToBoxAdapter(child: _buildActivityRings(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildStats(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildHealthCards(context, fitnessData)),
             SliverToBoxAdapter(child: _buildQuickStartCard(context)),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
@@ -27,7 +37,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String name, FitnessService fitness) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
@@ -39,7 +49,7 @@ class HomeScreen extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Hello, Asha! ',
+                    'Hello, ${name.split(' ')[0]}! ',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -53,14 +63,16 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4CD8D8),
+                    decoration: BoxDecoration(
+                      color: fitness.isDeviceConnected ? const Color(0xFF4CD8D8) : Colors.red,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Connected with Samsung Watch',
+                    fitness.isDeviceConnected 
+                      ? 'Connected with ${fitness.deviceName}'
+                      : 'No device connected',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.textSecondary,
                           fontSize: 11,
@@ -109,7 +121,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStreakSection(BuildContext context) {
+  Widget _buildStreakSection(BuildContext context, int streak) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
@@ -133,8 +145,8 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '3 weeks',
-                  style: TextStyle(
+                  '$streak weeks',
+                  style: const TextStyle(
                     color: AppTheme.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -144,27 +156,27 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const WeekDayStrip(currentDay: 3), // Wednesday = index 3
+          WeekDayStrip(currentDay: DateTime.now().weekday - 1), 
         ],
       ),
     );
   }
 
-  Widget _buildActivityRings(BuildContext context) {
+  Widget _buildActivityRings(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Center(
         child: ActivityRingsWidget(
-          caloriesProgress: 0.30, // 150/500
-          stepsProgress: 0.60,   // 1500/2500
-          moveProgress: 0.50,    // 25/50 min
+          caloriesProgress: data.caloriesProgress,
+          stepsProgress: data.stepsProgress,
+          moveProgress: data.moveMinutesProgress,
           size: 190,
         ),
       ),
     );
   }
 
-  Widget _buildStats(BuildContext context) {
+  Widget _buildStats(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
@@ -174,36 +186,36 @@ class HomeScreen extends StatelessWidget {
             color: AppTheme.ringCalories,
             icon: Icons.local_fire_department_rounded,
             label: 'Calories',
-            value: '150',
-            unit: 'KCAL/CAL',
+            value: data.calories.toString(),
+            unit: 'KCAL/${data.caloriesGoal}',
           ),
           _StatBadge(
             color: AppTheme.ringSteps,
             icon: Icons.directions_walk_rounded,
             label: 'Steps',
-            value: '1500',
-            unit: '5500',
+            value: data.steps.toString(),
+            unit: data.stepsGoal.toString(),
           ),
           _StatBadge(
             color: AppTheme.ringMove,
             icon: Icons.timer_rounded,
             label: 'Move',
-            value: '25',
-            unit: '25MIN',
+            value: data.moveMinutes.toString(),
+            unit: '${data.moveMinutesGoal}MIN',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHealthCards(BuildContext context) {
+  Widget _buildHealthCards(BuildContext context, FitnessService data) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
-          Expanded(child: _HeartRateCard()),
+          Expanded(child: _HeartRateCard(heartRate: data.heartRate)),
           const SizedBox(width: 12),
-          Expanded(child: _SleepCard()),
+          Expanded(child: _SleepCard(duration: data.sleepDuration)),
         ],
       ),
     );
@@ -314,6 +326,10 @@ class _StatBadge extends StatelessWidget {
 }
 
 class _HeartRateCard extends StatelessWidget {
+  final int heartRate;
+
+  const _HeartRateCard({required this.heartRate});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -342,7 +358,7 @@ class _HeartRateCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '135 bpm',
+            '$heartRate bpm',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -380,6 +396,10 @@ class _HeartRateLinePainter extends CustomPainter {
 }
 
 class _SleepCard extends StatelessWidget {
+  final String duration;
+
+  const _SleepCard({required this.duration});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -408,7 +428,7 @@ class _SleepCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '7h 12m',
+            duration,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

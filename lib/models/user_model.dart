@@ -16,7 +16,7 @@ class UserModel {
   final String workoutGoal;
 
   const UserModel({
-    this.name = 'Asha Irawan',
+    this.name = 'User',
     this.age = 21,
     this.height = 160,
     this.weight = 58,
