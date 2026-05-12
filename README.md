@@ -20,7 +20,11 @@ Make sure these are installed:
 
 The app opens with a splash screen, then checks authentication state. New users land on the onboarding screen.
 
-`[ screenshot: onboarding screen ]`
+<p>
+  <img width="1080" height="2340" alt="image" src="https://github.com/user-attachments/assets/a00ffd29-cb36-4cc7-8b9b-3a7e2d20f91b" />
+  &nbsp;
+  <img width="738" height="1600" alt="image" src="https://github.com/user-attachments/assets/7582d450-a148-4cb2-82b6-3264ba265b51" />
+</p>
 
 From onboarding, the user is taken to the login screen to sign in or create an account.
 
