@@ -417,18 +417,16 @@ class _DailySummaryRow extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 16),
             const SizedBox(width: 8),
-            rawValue == 0
-                ? Text('--', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w700))
-                : TweenAnimationBuilder<double>(
-                    key: ValueKey(rawValue),
-                    tween: Tween(begin: 0, end: rawValue.toDouble()),
-                    duration: const Duration(milliseconds: 1200),
-                    curve: Curves.easeOut,
-                    builder: (_, val, __) => Text(
-                      _fmt(val.toInt()),
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+            TweenAnimationBuilder<double>(
+              key: ValueKey(rawValue),
+              tween: Tween(begin: 0, end: rawValue.toDouble()),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOut,
+              builder: (_, val, __) => Text(
+                _fmt(val.toInt()),
+                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
             const SizedBox(width: 5),
             Text(unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
             const Spacer(),

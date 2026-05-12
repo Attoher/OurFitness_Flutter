@@ -37,11 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isLogin) {
       error = await auth.signIn(email, password);
     } else {
+      // Store name before sign-up so _createInitialProfile picks it up correctly
+      context.read<FitnessService>().setPendingRegistrationName(name);
       error = await auth.signUp(email, password, name);
-      // Override any race-condition "New User" stored by FitnessService listener
-      if (error == null && mounted) {
-        await context.read<FitnessService>().updateProfile(name: name);
-      }
     }
 
     if (mounted) {

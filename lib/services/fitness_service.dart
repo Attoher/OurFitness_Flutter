@@ -41,6 +41,11 @@ class FitnessService extends ChangeNotifier {
   // Simulation
   bool _hasRealDailyData = false;
   Timer? _simTimer;
+  String? _pendingRegistrationName;
+
+  void setPendingRegistrationName(String name) {
+    _pendingRegistrationName = name;
+  }
 
   FitnessService() {
     _auth.authStateChanges().listen((user) {
@@ -145,8 +150,10 @@ class FitnessService extends ChangeNotifier {
   }
 
   Future<void> _createInitialProfile(String uid) async {
+    final name = _pendingRegistrationName ?? _auth.currentUser?.displayName ?? 'User';
+    _pendingRegistrationName = null;
     await _firestore.collection('users').doc(uid).set({
-      'displayName': _auth.currentUser?.displayName ?? 'New User',
+      'displayName': name,
       'age': 21,
       'height': 160.0,
       'weight': 58.0,
@@ -205,14 +212,14 @@ class FitnessService extends ChangeNotifier {
     _heartRate = 68 + (sin(phase * pi) * 7).round(); // 61–75 range
 
     if (!_hasRealDailyData) {
-      // Simulate activity proportional to time of day (6am–10pm = active window)
+      // Simulate activity proportional to time of day; baseline ensures non-zero values
       const startMin = 6 * 60;
       const endMin = 22 * 60;
       final currMin = now.hour * 60 + now.minute;
-      final progress = ((currMin - startMin) / (endMin - startMin)).clamp(0.0, 1.0);
-      _steps = (progress * 3800).toInt();
-      _calories = (_steps * 0.042).round();
-      _moveMinutes = (progress * 38).toInt();
+      final dayProgress = ((currMin - startMin) / (endMin - startMin)).clamp(0.0, 1.0);
+      _steps = 700 + (dayProgress * 4500).toInt();
+      _calories = 30 + (dayProgress * 260).toInt();
+      _moveMinutes = 8 + (dayProgress * 38).toInt();
     }
 
     notifyListeners();
