@@ -50,7 +50,7 @@ class OnboardingScreen extends StatelessWidget {
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/home');
+                  Navigator.of(context).pushReplacementNamed('/auth');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,

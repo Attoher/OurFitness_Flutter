@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/main_scaffold.dart';
 import 'screens/login_screen.dart';
 import 'services/fitness_service.dart';
@@ -47,8 +48,11 @@ class OurFitnessApp extends StatelessWidget {
       title: 'OurFitness',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const AuthWrapper(),
+      home: const SplashScreen(), 
       routes: {
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/auth': (context) => const AuthWrapper(),
+        '/login': (context) => const LoginScreen(),
         '/home': (context) => const MainScaffold(),
       },
     );
