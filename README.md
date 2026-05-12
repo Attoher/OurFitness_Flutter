@@ -1,83 +1,142 @@
 # OurFitness
 
-A comprehensive fitness tracking app to monitor your daily activities, set goals, and stay motivated through gamification.
+Dark-themed fitness tracking app for daily activity monitoring, goal streaks, and live run tracking — built with Flutter and Firebase.
 
-## Features
+- Platform: Android & iOS
+- State management: Provider
+- Backend: Firebase Auth + Cloud Firestore
+- Maps: Google Maps Flutter
+- Charts: fl_chart
 
-- 🏠 **Home Dashboard** — Activity rings, heart rate monitoring, and sleep tracking at a glance
-- 🏆 **Gamification** — Earn badges, maintain streaks, and complete challenges to stay motivated
-- ➕ **Quick Sport Selection** — Floating action button for rapid workout logging
-- 📊 **Weekly & Monthly Statistics** — Custom-built charts with detailed insights on your performance
-- 👤 **User Profile** — Connected device info and weekly goal configuration
-- 🏃 **Running Tracker** — Real-time map visualization with live stats and route tracking
-- 🔔 **Smart Notifications** — Alerts for streaks and achievement milestones
+## Prerequisites
 
-## Getting Started
+Make sure these are installed:
 
-### Prerequisites
-- Flutter SDK >= 3.10.0
-- Dart SDK >= 3.0.0
+- Flutter 3.10+: `flutter --version`
+- Dart 3.0+: `dart --version`
+- A Firebase project with **Authentication** (Email/Password) and **Cloud Firestore** enabled
 
-### Installation
+## App flow and screenshots
 
-1. Get dependencies:
-   ```bash
-   flutter pub get
-   ```
+The app opens with a splash screen, then checks authentication state. New users land on the onboarding screen.
 
-2. Run the app:
-   ```bash
-   flutter run
-   ```
+`[ screenshot: onboarding screen ]`
 
-## Architecture Highlights
+From onboarding, the user is taken to the login screen to sign in or create an account.
 
-- **CustomPainter-based UI** — All charts (activity rings, heart rate line, bar charts, line charts), maps, and custom visualizations are built using Flutter's `CustomPainter` for optimal performance
-- **Material Design** — Clean, modern interface following Material Design 3 principles
-- **State Management** — Efficient state handling with Flutter's built-in mechanisms
-- **No Third-Party Chart/Map Libraries** — All visualizations are custom-built for a lightweight app
+`[ screenshot: login screen ]`
 
-## Project Structure
+After signing in, the user lands on the **Home** dashboard, showing the three activity rings (steps, calories, move minutes), live heart rate, sleep duration, and connected device status.
+
+`[ screenshot: home screen ]`
+
+Tapping the center button in the bottom navigation opens the **Sport Selection** sheet to start a workout.
+
+`[ screenshot: sport selection bottom sheet ]`
+
+After selecting a sport, the app shows the **Warmup** screen with a pre-run timer before recording begins.
+
+`[ screenshot: warmup screen ]`
+
+Once warmup is done, the **Running Tracker** screen opens with a live Google Maps route trace, and real-time stats — distance, pace, and calories burned.
+
+`[ screenshot: running tracker screen ]`
+
+The **Achievements** tab shows the user's badge collection, streak card, XP level, and weekly goal challenges. When a user earns a badge for the first time, a toast notification slides up from the bottom of the screen with a 5-second countdown bar. The user can swipe it down to dismiss or tap **View** to open the full detail.
+
+`[ screenshot: achievements screen ]` `[ screenshot: badge toast notification ]`
+
+Tapping **View** on the toast — or tapping any earned badge in the grid — opens the **Badge Detail** screen: a full-screen shareable view with an animated sparkle background, glowing badge icon, achievement title, and description.
+
+`[ screenshot: badge detail full screen ]`
+
+The **Statistics** tab displays weekly steps and calories as a bar chart. Days before today show realistic sample data with a "Sample" pill label until real workout data is recorded.
+
+`[ screenshot: statistics — steps ]` `[ screenshot: statistics — calories ]`
+
+The **Profile** tab shows user info, connected device details, and goal settings. Tapping the bell icon opens the **Notification Center** with all achievement and milestone alerts.
+
+`[ screenshot: profile screen ]` `[ screenshot: notification center ]`
+
+## How to run
+
+### 1) Clone and install Flutter deps
+
+```bash
+git clone https://github.com/Attoher/OurFitness_Flutter.git
+cd OurFitness_Flutter
+flutter pub get
+```
+
+### 2) Firebase setup
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Add Android and/or iOS app to the project
+3. Download config files and place them:
+   - `google-services.json` → `android/app/`
+   - `GoogleService-Info.plist` → `ios/Runner/`
+4. Enable **Email/Password** under Authentication → Sign-in method
+5. Create a Firestore database in production mode with these security rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+### 3) iOS pods (if iOS)
+
+```bash
+cd ios && pod install && cd ..
+```
+
+Open `ios/Runner.xcworkspace` (not `Runner.xcodeproj`).
+
+### 4) Run the app
+
+```bash
+flutter run
+```
+
+To select a specific device:
+
+```bash
+flutter devices
+flutter run -d <device-id>
+```
+
+## Project structure
 
 ```
 lib/
-├── main.dart                       — App entry point
-├── app_theme.dart                  — Theming and color configuration
-├── user_model.dart                 — User data model
-├── activity_rings.dart             — Custom activity rings widget
-├── home_screen.dart                — Home dashboard
-├── gamification_screen.dart        — Awards and challenges
-├── statistics_screen.dart          — Weekly and monthly stats
-├── profile_screen.dart             — User profile and settings
-├── running_tracker_screen.dart     — Run tracking with map
-├── sport_selection_screen.dart     — Sport/activity selection
-├── warmup_screen.dart              — Pre-workout warmup
-├── notifications_screen.dart       — Notification center
-└── main_scaffold.dart              — Main navigation layout
+├── main.dart
+├── firebase_options.dart
+├── theme/
+│   └── app_theme.dart
+├── models/
+│   └── user_model.dart
+├── services/
+│   ├── auth_service.dart
+│   └── fitness_service.dart
+├── widgets/
+│   ├── activity_rings.dart
+│   └── week_day_strip.dart
+└── screens/
+    ├── main_scaffold.dart
+    ├── home_screen.dart
+    ├── gamification_screen.dart
+    ├── statistics_screen.dart
+    ├── profile_screen.dart
+    ├── running_tracker_screen.dart
+    ├── sport_selection_screen.dart
+    ├── notifications_screen.dart
+    ├── login_screen.dart
+    ├── onboarding_screen.dart
+    ├── splash_screen.dart
+    └── warmup_screen.dart
 ```
-
-## Navigation
-
-The app uses a bottom navigation bar with 5 primary sections:
-- **Home** — Dashboard view
-- **Awards** — Gamification and achievements
-- **[FAB]** — Quick sport selection (triggers bottom sheet)
-- **Statistics** — Performance insights
-- **Profile** — User settings and goals
-
-## Color Palette
-
-| Element | Color |
-|---------|-------|
-| Background | `#0F0F0F` |
-| Surface | `#1E1E1E` |
-| Surface Light | `#2A2A2A` |
-| Accent (Lime) | `#CBEF43` |
-| Accent Dark | `#9BBF1A` |
-| Heart Rate Red | `#FF5C5C` |
-| Cyan / Steps | `#4CD8D8` |
-| Purple / Move | `#7B5FDB` |
-
-## License
-
-Proprietary — All rights reserved.

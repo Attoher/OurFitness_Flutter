@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/main_scaffold.dart';
@@ -14,7 +15,7 @@ void main() async {
   
   // Initialize Firebase (wrapped in try-catch for cases where config is missing)
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   } catch (e) {
     debugPrint("Firebase not initialized: Check your google-services.json / GoogleService-Info.plist");
   }

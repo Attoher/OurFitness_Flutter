@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
-import 'warmup_screen.dart';
+import 'activity_preview_screen.dart';
 
 // Helper function to convert icon name to IconData
 IconData _getIconFromName(String iconName) {
@@ -122,12 +122,12 @@ class _SportSelectionSheetState extends State<SportSelectionSheet> {
                           onTap: () {
                             setState(() => _selectedSport = s.name);
                             final navigator = Navigator.of(context);
-                            Future.delayed(const Duration(milliseconds: 200), () {
+                            Future.delayed(const Duration(milliseconds: 150), () {
                               if (!mounted) return;
                               navigator.pop();
                               navigator.push(
                                 MaterialPageRoute(
-                                  builder: (_) => WarmupScreen(sport: s),
+                                  builder: (_) => ActivityPreviewScreen(sport: s),
                                 ),
                               );
                             });
@@ -144,12 +144,12 @@ class _SportSelectionSheetState extends State<SportSelectionSheet> {
                           onTap: () {
                             setState(() => _selectedSport = s.name);
                             final navigator = Navigator.of(context);
-                            Future.delayed(const Duration(milliseconds: 200), () {
+                            Future.delayed(const Duration(milliseconds: 150), () {
                               if (!mounted) return;
                               navigator.pop();
                               navigator.push(
                                 MaterialPageRoute(
-                                  builder: (_) => WarmupScreen(sport: s),
+                                  builder: (_) => ActivityPreviewScreen(sport: s),
                                 ),
                               );
                             });

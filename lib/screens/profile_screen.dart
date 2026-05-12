@@ -12,7 +12,7 @@ class ProfileScreen extends StatelessWidget {
     final fitnessData = context.watch<FitnessService>();
     final authService = context.watch<AuthService>();
     final user = authService.user;
-    final userName = user?.displayName ?? fitnessData.displayName;
+    final userName = fitnessData.displayName != 'User' ? fitnessData.displayName : (user?.displayName ?? 'User');
     
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -39,15 +39,6 @@ class ProfileScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('Profile', style: Theme.of(context).textTheme.displaySmall),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary, size: 20),
-          ),
         ],
       ),
     );
@@ -244,35 +235,37 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Text(
                   'DAILY SUMMARY',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
                 ),
                 Icon(Icons.sunny, color: AppTheme.accent, size: 18),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.directions_walk_rounded, color: AppTheme.accent, size: 20),
-                const SizedBox(width: 8),
-                Text(data.steps.toString(), style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(width: 4),
-                const Text('steps', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-              ],
+            const SizedBox(height: 14),
+            _DailySummaryRow(
+              icon: Icons.directions_walk_rounded,
+              color: AppTheme.ringSteps,
+              rawValue: data.steps,
+              unit: 'steps',
+              progress: data.stepsProgress,
+              goal: data.stepsGoal,
             ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: data.stepsProgress,
-                backgroundColor: AppTheme.surfaceLight,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
-                minHeight: 6,
-              ),
+            const SizedBox(height: 10),
+            _DailySummaryRow(
+              icon: Icons.local_fire_department_rounded,
+              color: AppTheme.ringCalories,
+              rawValue: data.calories,
+              unit: 'kcal',
+              progress: data.caloriesProgress,
+              goal: data.caloriesGoal,
+            ),
+            const SizedBox(height: 10),
+            _DailySummaryRow(
+              icon: Icons.timer_rounded,
+              color: AppTheme.ringMove,
+              rawValue: data.moveMinutes,
+              unit: 'min active',
+              progress: data.moveMinutesProgress,
+              goal: data.moveMinutesGoal,
             ),
           ],
         ),
@@ -293,7 +286,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 10),
           _OptionTile(
             icon: Icons.lock_outline_rounded,
-            label: 'Change Password & Privacy',
+            label: 'Change Password',
             onTap: () => _showChangePasswordDialog(context, authService),
           ),
           const SizedBox(height: 10),
@@ -340,14 +333,14 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () async {
-              await fitness.updateProfile(
+            onPressed: () {
+              Navigator.pop(context);
+              fitness.updateProfile(
                 name: nameController.text,
                 age: int.tryParse(ageController.text),
                 height: double.tryParse(heightController.text),
                 weight: double.tryParse(weightController.text),
               );
-              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Save'),
           ),
@@ -368,14 +361,10 @@ class ProfileScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
+              Navigator.pop(context);
               final error = await auth.changePassword(passwordController.text);
-              if (context.mounted) {
-                if (error != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated!')));
-                  Navigator.pop(context);
-                }
+              if (error != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
               }
             },
             child: const Text('Update'),
@@ -397,6 +386,73 @@ class ProfileScreen extends StatelessWidget {
         enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
       ),
+    );
+  }
+}
+
+class _DailySummaryRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final int rawValue;
+  final String unit;
+  final double progress;
+  final int goal;
+
+  const _DailySummaryRow({
+    required this.icon,
+    required this.color,
+    required this.rawValue,
+    required this.unit,
+    required this.progress,
+    required this.goal,
+  });
+
+  String _fmt(int val) => val >= 1000 ? '${(val / 1000).toStringAsFixed(1)}k' : '$val';
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 8),
+            rawValue == 0
+                ? Text('--', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w700))
+                : TweenAnimationBuilder<double>(
+                    key: ValueKey(rawValue),
+                    tween: Tween(begin: 0, end: rawValue.toDouble()),
+                    duration: const Duration(milliseconds: 1200),
+                    curve: Curves.easeOut,
+                    builder: (_, val, __) => Text(
+                      _fmt(val.toInt()),
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+            const SizedBox(width: 5),
+            Text(unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            const Spacer(),
+            Text(
+              '${(progress * 100).toInt()}%',
+              style: TextStyle(
+                color: progress >= 1.0 ? color : AppTheme.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: color.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 4,
+          ),
+        ),
+      ],
     );
   }
 }

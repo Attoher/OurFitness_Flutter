@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
     final fitnessData = context.watch<FitnessService>();
     final authService = context.watch<AuthService>();
     final user = authService.user;
-    final userName = user?.displayName ?? fitnessData.displayName;
+    final userName = fitnessData.displayName != 'User' ? fitnessData.displayName : (user?.displayName ?? 'User');
     
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -101,18 +101,19 @@ class HomeScreen extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.accent,
-                      shape: BoxShape.circle,
+                if (fitness.notifications.isNotEmpty)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.accent,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -184,24 +185,21 @@ class HomeScreen extends StatelessWidget {
         children: [
           _StatBadge(
             color: AppTheme.ringCalories,
-            icon: Icons.local_fire_department_rounded,
             label: 'Calories',
-            value: data.calories.toString(),
-            unit: 'KCAL/${data.caloriesGoal}',
+            value: data.calories,
+            unit: 'kcal / ${data.caloriesGoal}',
           ),
           _StatBadge(
             color: AppTheme.ringSteps,
-            icon: Icons.directions_walk_rounded,
             label: 'Steps',
-            value: data.steps.toString(),
-            unit: data.stepsGoal.toString(),
+            value: data.steps,
+            unit: '/ ${data.stepsGoal}',
           ),
           _StatBadge(
             color: AppTheme.ringMove,
-            icon: Icons.timer_rounded,
             label: 'Move',
-            value: data.moveMinutes.toString(),
-            unit: '${data.moveMinutesGoal}MIN',
+            value: data.moveMinutes,
+            unit: '/ ${data.moveMinutesGoal} min',
           ),
         ],
       ),
@@ -275,16 +273,63 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+// Pulsing live-tracking dot
+class _PulseDot extends StatefulWidget {
+  final Color color;
+  const _PulseDot({required this.color});
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.35, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(
+          color: widget.color.withValues(alpha: _anim.value),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withValues(alpha: _anim.value * 0.5),
+              blurRadius: 6 * _anim.value,
+              spreadRadius: 1.5 * _anim.value,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StatBadge extends StatelessWidget {
   final Color color;
-  final IconData icon;
   final String label;
-  final String value;
+  final int value;
   final String unit;
 
   const _StatBadge({
     required this.color,
-    required this.icon,
     required this.label,
     required this.value,
     required this.unit,
@@ -294,30 +339,26 @@ class _StatBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        _PulseDot(color: color),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+            TweenAnimationBuilder<double>(
+              key: ValueKey(value),
+              tween: Tween(begin: 0, end: value.toDouble()),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOut,
+              builder: (_, val, __) => Text(
+                val.toInt().toString(),
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            Text(
-              unit,
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 10,
-              ),
-            ),
+            Text(unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
           ],
         ),
       ],
@@ -325,43 +366,79 @@ class _StatBadge extends StatelessWidget {
   }
 }
 
-class _HeartRateCard extends StatelessWidget {
+class _HeartRateCard extends StatefulWidget {
   final int heartRate;
-
   const _HeartRateCard({required this.heartRate});
 
   @override
+  State<_HeartRateCard> createState() => _HeartRateCardState();
+}
+
+class _HeartRateCardState extends State<_HeartRateCard> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.4, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bpm = widget.heartRate;
+    final String zone = bpm < 60 ? 'Resting' : bpm < 100 ? 'Normal' : 'Active';
+    final Color zoneColor = bpm < 60
+        ? const Color(0xFF4CD8D8)
+        : bpm < 100
+            ? AppTheme.heartRate
+            : Colors.orangeAccent;
+
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.favorite_rounded, color: AppTheme.heartRate, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'Heart rate',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (_, __) => Icon(
+                  Icons.favorite_rounded,
+                  color: AppTheme.heartRate.withValues(alpha: _pulse.value),
+                  size: 16,
+                ),
               ),
+              const SizedBox(width: 6),
+              Text('Heart rate', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13)),
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: CustomPaint(painter: _HeartRateLinePainter()),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
-            '$heartRate bpm',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+            '$bpm',
+            style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text('bpm  ', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: zoneColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Text(zone, style: TextStyle(color: zoneColor, fontSize: 10, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ],
       ),
@@ -369,69 +446,60 @@ class _HeartRateCard extends StatelessWidget {
   }
 }
 
-class _HeartRateLinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.heartRate
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    final points = [0.2, 0.5, 0.3, 0.7, 0.2, 0.9, 0.1, 0.6, 0.4, 0.3, 0.5];
-    final path = Path();
-    for (int i = 0; i < points.length; i++) {
-      final x = i / (points.length - 1) * size.width;
-      final y = (1 - points[i]) * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 class _SleepCard extends StatelessWidget {
   final String duration;
-
   const _SleepCard({required this.duration});
+
+  String _sleepQuality(String dur) {
+    final parts = dur.replaceAll('h', '').replaceAll('m', '').trim().split(' ');
+    final hours = int.tryParse(parts[0]) ?? 0;
+    if (hours >= 8) return 'Great';
+    if (hours >= 6) return 'Good';
+    return 'Low';
+  }
 
   @override
   Widget build(BuildContext context) {
+    const sleepColor = Color(0xFF7B5FDB);
+    final quality = _sleepQuality(duration);
+    final Color qualityColor = quality == 'Great'
+        ? const Color(0xFF4CD8D8)
+        : quality == 'Good'
+            ? sleepColor
+            : Colors.orangeAccent;
+
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.bedtime_rounded, color: Color(0xFF7B5FDB), size: 16),
+              const Icon(Icons.bedtime_rounded, color: sleepColor, size: 16),
               const SizedBox(width: 6),
-              Text(
-                'Sleep',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
-              ),
+              Text('Sleep', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13)),
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: CustomPaint(painter: _SleepBarPainter()),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
             duration,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Text('last night  ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: qualityColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Text(quality, style: TextStyle(color: qualityColor, fontSize: 10, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ],
       ),
@@ -439,25 +507,3 @@ class _SleepCard extends StatelessWidget {
   }
 }
 
-class _SleepBarPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF7B5FDB)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-
-    final heights = [0.4, 0.6, 0.9, 0.7, 0.5, 0.8, 0.6, 0.4, 0.7, 0.5];
-    final barWidth = size.width / heights.length;
-
-    for (int i = 0; i < heights.length; i++) {
-      final x = i * barWidth + barWidth / 2;
-      final barHeight = size.height * heights[i];
-      final y = size.height - barHeight;
-      canvas.drawLine(Offset(x, size.height), Offset(x, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -17,13 +19,13 @@ class FitnessService extends ChangeNotifier {
   bool _isDeviceConnected = true;
 
   int _steps = 0;
-  final int _stepsGoal = 5500;
+  int _stepsGoal = 5500;
   int _calories = 0;
-  final int _caloriesGoal = 500;
+  int _caloriesGoal = 500;
   int _moveMinutes = 0;
-  final int _moveMinutesGoal = 50;
-  int _heartRate = 0;
-  String _sleepDuration = '0h 0m';
+  int _moveMinutesGoal = 50;
+  int _heartRate = 68;
+  String _sleepDuration = '7h 24m';
 
   int _streak = 0;
   int _level = 1;
@@ -32,8 +34,13 @@ class FitnessService extends ChangeNotifier {
 
   List<Map<String, dynamic>> _badges = [];
   List<Map<String, dynamic>> _notifications = [];
+  Map<String, dynamic>? _pendingBadgeToast;
   List<double> _weeklySteps = List.filled(7, 0.0);
   List<double> _weeklyCalories = List.filled(7, 0.0);
+
+  // Simulation
+  bool _hasRealDailyData = false;
+  Timer? _simTimer;
 
   FitnessService() {
     _auth.authStateChanges().listen((user) {
@@ -64,23 +71,34 @@ class FitnessService extends ChangeNotifier {
         _deviceName = data['deviceName'] ?? _deviceName;
         _batteryLevel = data['batteryLevel'] ?? _batteryLevel;
         _isDeviceConnected = data['isDeviceConnected'] ?? _isDeviceConnected;
+        _stepsGoal = data['stepsGoal'] ?? _stepsGoal;
+        _caloriesGoal = data['caloriesGoal'] ?? _caloriesGoal;
+        _moveMinutesGoal = data['moveMinutesGoal'] ?? _moveMinutesGoal;
         notifyListeners();
       } else {
         _createInitialProfile(uid);
       }
     });
 
+    // Start simulation immediately, real data will override when available
+    _startSimulation();
+
     // Listen to Daily Progress
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _firestore.collection('users').doc(uid).collection('daily_stats').doc(today).snapshots().listen((doc) {
       if (doc.exists) {
-        debugPrint('Daily stats found for $today: ${doc.data()}');
         final data = doc.data()!;
-        _steps = data['steps'] ?? 0;
-        _calories = data['calories'] ?? 0;
-        _moveMinutes = data['moveMinutes'] ?? 0;
-        _heartRate = data['heartRate'] ?? 0;
-        _sleepDuration = data['sleepDuration'] ?? '0h 0m';
+        final realSteps = (data['steps'] ?? 0) as int;
+        if (realSteps > 0) {
+          _hasRealDailyData = true;
+          _steps = realSteps;
+          _calories = data['calories'] ?? 0;
+          _moveMinutes = data['moveMinutes'] ?? 0;
+        }
+        final realHr = (data['heartRate'] ?? 0) as int;
+        if (realHr > 0) _heartRate = realHr;
+        final sleep = data['sleepDuration'] as String?;
+        if (sleep != null && sleep != '0h 0m') _sleepDuration = sleep;
         notifyListeners();
       }
     });
@@ -121,6 +139,7 @@ class FitnessService extends ChangeNotifier {
       case 'bedtime': return Icons.bedtime_rounded;
       case 'bolt': return Icons.bolt_rounded;
       case 'workspace_premium': return Icons.workspace_premium_rounded;
+      case 'rocket_launch': return Icons.rocket_launch_rounded;
       default: return Icons.star_rounded;
     }
   }
@@ -140,22 +159,83 @@ class FitnessService extends ChangeNotifier {
       'isDeviceConnected': true,
     });
 
+    const firstStepBadge = {
+      'icon': 'rocket_launch',
+      'title': 'First Step',
+      'desc': 'Joined OurFitness',
+      'detail': 'You took the first step toward a healthier life. Every legend starts somewhere — this is your origin story.',
+      'earnedOn': 'Today',
+      'done': true,
+    };
+
     final initialBadges = [
-      {'icon': 'directions_run', 'title': 'First Run', 'desc': 'Completed', 'done': true},
+      firstStepBadge,
       {'icon': 'local_fire_department', 'title': '7-Day Streak', 'desc': 'In progress', 'done': false},
     ];
     for (var b in initialBadges) {
       await _firestore.collection('users').doc(uid).collection('badges').add(b);
     }
+
+    await _firestore.collection('users').doc(uid).collection('notifications').add({
+      'icon': 'rocket_launch',
+      'title': 'Badge Unlocked: First Step',
+      'body': 'Welcome to OurFitness! You earned your first badge.',
+      'time': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+
+    _pendingBadgeToast = {
+      ...firstStepBadge,
+      'icon': Icons.rocket_launch_rounded,
+    };
+    notifyListeners();
+  }
+
+  void _startSimulation() {
+    _simTimer?.cancel();
+    _applySimulation();
+    _simTimer = Timer.periodic(const Duration(seconds: 4), (_) => _applySimulation());
+  }
+
+  void _applySimulation() {
+    final now = DateTime.now();
+
+    // HR: smooth resting variation 63–76 bpm using sine wave on seconds
+    final phase = (now.second + now.millisecond / 1000.0) / 13.0;
+    _heartRate = 68 + (sin(phase * pi) * 7).round(); // 61–75 range
+
+    if (!_hasRealDailyData) {
+      // Simulate activity proportional to time of day (6am–10pm = active window)
+      const startMin = 6 * 60;
+      const endMin = 22 * 60;
+      final currMin = now.hour * 60 + now.minute;
+      final progress = ((currMin - startMin) / (endMin - startMin)).clamp(0.0, 1.0);
+      _steps = (progress * 3800).toInt();
+      _calories = (_steps * 0.042).round();
+      _moveMinutes = (progress * 38).toInt();
+    }
+
+    notifyListeners();
   }
 
   void _resetData() {
+    _simTimer?.cancel();
+    _hasRealDailyData = false;
     _steps = 0;
     _calories = 0;
     _moveMinutes = 0;
+    _heartRate = 68;
+    _sleepDuration = '7h 24m';
     _badges = [];
     _notifications = [];
+    _pendingBadgeToast = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _simTimer?.cancel();
+    super.dispose();
   }
 
   // Getters
@@ -189,8 +269,26 @@ class FitnessService extends ChangeNotifier {
   List<Map<String, dynamic>> get notifications => _notifications;
   List<double> get weeklySteps => _weeklySteps;
   List<double> get weeklyCalories => _weeklyCalories;
+  Map<String, dynamic>? get pendingBadgeToast => _pendingBadgeToast;
+
+  void consumeBadgeToast() {
+    _pendingBadgeToast = null;
+    // no notifyListeners — caller already reacted
+  }
 
   // Methods to update data
+  Future<void> updateGoals({int? stepsGoal, int? caloriesGoal, int? moveMinutesGoal}) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final updates = <String, dynamic>{};
+    if (stepsGoal != null) updates['stepsGoal'] = stepsGoal;
+    if (caloriesGoal != null) updates['caloriesGoal'] = caloriesGoal;
+    if (moveMinutesGoal != null) updates['moveMinutesGoal'] = moveMinutesGoal;
+
+    await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
+  }
+
   Future<void> updateProfile({String? name, int? age, double? height, double? weight}) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
@@ -201,7 +299,7 @@ class FitnessService extends ChangeNotifier {
     if (height != null) updates['height'] = height;
     if (weight != null) updates['weight'] = weight;
 
-    await _firestore.collection('users').doc(uid).update(updates);
+    await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
   }
 
   Future<void> addSteps(int count) async {
@@ -283,22 +381,34 @@ class FitnessService extends ChangeNotifier {
   }
 
   Future<void> _fetchWeeklyStats(String uid) async {
+    // Realistic simulation values for days with no real data
+    const simSteps = [5200.0, 8100.0, 3400.0, 6800.0, 4200.0, 9200.0, 0.0];
+    const simCals  = [218.0,  340.0,  142.0,  285.0,  176.0,  386.0,  0.0];
+
     final now = DateTime.now();
     List<double> steps = [];
-    List<double> cals = [];
-    
+    List<double> cals  = [];
+
     for (int i = 6; i >= 0; i--) {
       final date = DateFormat('yyyy-MM-dd').format(now.subtract(Duration(days: i)));
-      final doc = await _firestore.collection('users').doc(uid).collection('daily_stats').doc(date).get();
-      if (doc.exists) {
+      final doc = await _firestore
+          .collection('users').doc(uid).collection('daily_stats').doc(date).get();
+      final dayIndex = 6 - i;
+
+      if (doc.exists && (doc.data()!['steps'] ?? 0) > 0) {
         steps.add((doc.data()!['steps'] ?? 0).toDouble());
         cals.add((doc.data()!['calories'] ?? 0).toDouble());
+      } else if (i == 0) {
+        // Today: use current simulated/real value
+        steps.add(_steps.toDouble());
+        cals.add(_calories.toDouble());
       } else {
-        steps.add(0.0);
-        cals.add(0.0);
+        // Past day with no recorded data — use realistic simulation
+        steps.add(simSteps[dayIndex]);
+        cals.add(simCals[dayIndex]);
       }
     }
-    
+
     _weeklySteps = steps;
     _weeklyCalories = cals;
     notifyListeners();

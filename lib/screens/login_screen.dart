@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/fitness_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,6 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
       error = await auth.signIn(email, password);
     } else {
       error = await auth.signUp(email, password, name);
+      // Override any race-condition "New User" stored by FitnessService listener
+      if (error == null && mounted) {
+        await context.read<FitnessService>().updateProfile(name: name);
+      }
     }
 
     if (mounted) {

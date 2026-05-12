@@ -195,7 +195,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
                     children: [
                       const SizedBox(width: 24),
                       Text(
-                        'Running',
+                        widget.sport.name,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                               fontSize: 22,
@@ -283,23 +283,23 @@ class _MapPlaceholder extends StatelessWidget {
           // Map Labels
           const Positioned(
             top: 100,
-            left: 100,
-            child: _MapLabel(text: 'Red Square'),
+            left: 80,
+            child: _MapLabel(text: 'Perpustakaan ITS'),
           ),
           const Positioned(
             top: 200,
-            right: 80,
-            child: _MapLabel(text: 'taman sipil'),
+            right: 60,
+            child: _MapLabel(text: 'Taman Sepuluh Nopember'),
           ),
           const Positioned(
             bottom: 300,
-            left: 60,
-            child: _MapLabel(text: 'Raman BAAK-ITS', isHighlight: true),
+            left: 50,
+            child: _MapLabel(text: 'BAAK ITS', isHighlight: true),
           ),
           const Positioned(
             bottom: 250,
             right: 40,
-            child: _MapLabel(text: 'Monumen Titik Nol ITS', isHighlight: true),
+            child: _MapLabel(text: 'Titik Nol ITS', isHighlight: true),
           ),
           // Route path
           CustomPaint(
