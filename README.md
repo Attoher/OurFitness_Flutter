@@ -58,7 +58,7 @@ Once warmup is done, the **Running Tracker** screen opens with a live Google Map
 
 The **Achievements** tab shows the user's badge collection, streak card, XP level, and weekly goal challenges. 
 
-<img width="291" alt="IMG_1981" src="https://github.com/user-attachments/assets/e439345f-0b08-44ac-a62f-3aea1218d81f" />
+<img width="201" alt="IMG_1981" src="https://github.com/user-attachments/assets/e439345f-0b08-44ac-a62f-3aea1218d81f" />
 
 
 Tapping the badge may open the **Badge Detail** screen: a full-screen shareable view with an animated sparkle background, glowing badge icon, achievement title, and description.
