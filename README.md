@@ -24,39 +24,57 @@ The app opens with a splash screen, then checks authentication state. New users 
 
 From onboarding, the user is taken to the login screen to sign in or create an account.
 
-`[ screenshot: login screen ]`
+<p>
+  <img src="https://github.com/user-attachments/assets/cded1de3-1b5d-4fa3-abf0-6bdcbec6d241" width="201" alt="IMG_1974" />
+  &nbsp;
+  <img src="https://github.com/user-attachments/assets/93465267-671a-428b-9da2-c0b63e4a9bad" width="201" alt="IMG_1975" />
+</p>
+
 
 After signing in, the user lands on the **Home** dashboard, showing the three activity rings (steps, calories, move minutes), live heart rate, sleep duration, and connected device status.
 
-`[ screenshot: home screen ]`
+<img width="201" alt="IMG_1976" src="https://github.com/user-attachments/assets/9e464cea-9070-4a86-86e5-e7d7e90ed93b" />
+
 
 Tapping the center button in the bottom navigation opens the **Sport Selection** sheet to start a workout.
 
-`[ screenshot: sport selection bottom sheet ]`
+<img width="201" alt="IMG_1977" src="https://github.com/user-attachments/assets/4646b280-ec08-43aa-91b2-a6485af4382d" />
 
-After selecting a sport, the app shows the **Warmup** screen with a pre-run timer before recording begins.
 
-`[ screenshot: warmup screen ]`
+After selecting a sport, the app shows the **Quick Start** screen which user may choose between starting the sport or warming up.
 
-Once warmup is done, the **Running Tracker** screen opens with a live Google Maps route trace, and real-time stats — distance, pace, and calories burned.
+<img width="201" alt="IMG_1978" src="https://github.com/user-attachments/assets/70baa8c6-34b2-4c82-809c-bd09203cd48c" />
 
-`[ screenshot: running tracker screen ]`
 
-The **Achievements** tab shows the user's badge collection, streak card, XP level, and weekly goal challenges. When a user earns a badge for the first time, a toast notification slides up from the bottom of the screen with a 5-second countdown bar. The user can swipe it down to dismiss or tap **View** to open the full detail.
+If user chooses to warm up, **Warmup** screen with a pre-run timer before recording begins.
 
-`[ screenshot: achievements screen ]` `[ screenshot: badge toast notification ]`
+<img width="201" alt="IMG_1979" src="https://github.com/user-attachments/assets/abd71c31-3010-4b1d-954b-33d5b9dd6d2b" />
 
-Tapping **View** on the toast — or tapping any earned badge in the grid — opens the **Badge Detail** screen: a full-screen shareable view with an animated sparkle background, glowing badge icon, achievement title, and description.
 
-`[ screenshot: badge detail full screen ]`
+Once warmup is done, the **Running Tracker** screen opens with a live Google Maps route trace, and real-time stats: distance, pace, and calories burned.
 
-The **Statistics** tab displays weekly steps and calories as a bar chart. Days before today show realistic sample data with a "Sample" pill label until real workout data is recorded.
+<img width="201" alt="IMG_1980" src="https://github.com/user-attachments/assets/eedc8ae4-d0a6-44f5-ae54-be4a98c052ff" />
 
-`[ screenshot: statistics — steps ]` `[ screenshot: statistics — calories ]`
 
-The **Profile** tab shows user info, connected device details, and goal settings. Tapping the bell icon opens the **Notification Center** with all achievement and milestone alerts.
+The **Achievements** tab shows the user's badge collection, streak card, XP level, and weekly goal challenges. 
 
-`[ screenshot: profile screen ]` `[ screenshot: notification center ]`
+<img width="291" alt="IMG_1981" src="https://github.com/user-attachments/assets/e439345f-0b08-44ac-a62f-3aea1218d81f" />
+
+
+Tapping the badge may open the **Badge Detail** screen: a full-screen shareable view with an animated sparkle background, glowing badge icon, achievement title, and description.
+
+<img width="201" alt="IMG_1982" src="https://github.com/user-attachments/assets/73a75479-0f7c-49d1-a5dd-32c14b49e81e" />
+
+
+The **Statistics** tab displays today's steps and calories, also weekly steps and calories as a bar chart.
+
+<img width="201" alt="Screenshot 2026-05-13 at 00 38 13" src="https://github.com/user-attachments/assets/49909b91-d3d6-424b-a953-f4db04f10d04" />
+
+
+The **Profile** tab shows user info, connected device details, goals, and daily summary. User may customize their user info and password here. User may also sign out here.
+
+<img width="201" alt="IMG_1984" src="https://github.com/user-attachments/assets/ff0bf10d-b372-4fe0-a967-da801f497859" />
+
 
 ## How to run
 
