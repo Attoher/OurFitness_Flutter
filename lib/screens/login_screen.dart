@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
               final email = controller.text.trim();
               if (email.isEmpty) {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Masukkan email terlebih dahulu')),
+                  const SnackBar(content: Text('Enter your email first')),
                 );
                 return;
               }

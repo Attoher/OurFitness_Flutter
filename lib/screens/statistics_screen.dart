@@ -318,7 +318,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipColor: (_) => AppTheme.surfaceLight,
                       getTooltipItem: (group, _, rod, __) => BarTooltipItem(
-                        '${rod.toY.toStringAsFixed(_metricIndex == 2 ? 0 : 0)} ${_metricUnit}',
+                        '${rod.toY.toStringAsFixed(0)} ${_metricUnit}',
                         const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -472,7 +472,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Status ini dihitung dari goal completion rate dan consistency score agar progres terasa nyata, bukan hanya tampilan.',
+              'This status blends goal completion rate and consistency score so progress reflects real habits, not just visual polish.',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12, height: 1.5),
             ),
           ],

@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 const _defaultStepsGoal = 5500;
 const _defaultCaloriesGoal = 500;
 const _defaultMoveGoal = 50;
-const _levelXpMultiplier = 1.35;
+const _xpThresholdMultiplier = 1.35;
 
 class DailyStatRecord {
   final DateTime date;
@@ -1105,7 +1105,7 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
       uid: uid,
       icon: 'rocket_launch',
       title: 'Badge unlocked: First Step',
-      body: 'Welcome to OurFitness! Profil dan target awalmu sudah siap.',
+      body: 'Welcome to OurFitness! Your profile and initial goals are ready.',
       type: 'achievement',
     );
   }
@@ -1533,7 +1533,7 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
     while (xp >= levelThreshold) {
       xp -= levelThreshold;
       level += 1;
-      levelThreshold = (levelThreshold * _levelXpMultiplier).round();
+      levelThreshold = (levelThreshold * _xpThresholdMultiplier).round();
     }
     return _LevelProgress(level: level, currentXp: xp, nextLevelXp: levelThreshold);
   }

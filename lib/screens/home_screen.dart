@@ -185,7 +185,7 @@ class HomeScreen extends StatelessWidget {
               Expanded(child: WeekDayStrip(currentDay: DateTime.now().weekday - 1)),
               const SizedBox(width: 12),
               Text(
-                'Best $longestStreak d',
+                'Best $longestStreak days',
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
               ),
             ],

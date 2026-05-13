@@ -47,13 +47,16 @@ class NotificationsScreen extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final item = notifications[index];
+                    final notificationId = item['id'] as String?;
                     return _NotificationItem(
                       icon: item['icon'] as IconData,
                       title: item['title'] as String,
                       body: item['body'] as String,
                       time: item['time'] as String,
                       isNew: item['isNew'] as bool,
-                      onTap: () => fitnessData.markNotificationRead(item['id'] as String),
+                      onTap: notificationId == null
+                          ? () {}
+                          : () => fitnessData.markNotificationRead(notificationId),
                     );
                   },
                 ),

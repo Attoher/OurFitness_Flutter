@@ -179,7 +179,7 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         fitness.isDeviceConnected
                             ? 'Battery ${fitness.batteryLevel}%'
-                            : 'Hubungkan wearable untuk data real-time',
+                            : 'Connect a wearable for real-time data',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                       ),
                     ],
