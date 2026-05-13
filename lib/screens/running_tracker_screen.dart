@@ -52,9 +52,12 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
     // Save to FitnessService
     final fitness = context.read<FitnessService>();
     fitness.addWorkoutResult(
+      sport: widget.sport.name,
       calories: _calories,
       steps: (_distanceKm * 1300).round(), // 1km approx 1300 steps
-      durationMinutes: _elapsedSeconds ~/ 60,
+      durationMinutes: (_elapsedSeconds / 60).ceil(),
+      distanceKm: _distanceKm,
+      averageHeartRate: _heartRate,
     );
 
     showDialog(

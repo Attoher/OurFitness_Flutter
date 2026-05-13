@@ -18,14 +18,23 @@ class HomeScreen extends StatelessWidget {
     final authService = context.watch<AuthService>();
     final user = authService.user;
     final userName = fitnessData.displayName != 'User' ? fitnessData.displayName : (user?.displayName ?? 'User');
-    
+
+    if (fitnessData.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, userName, fitnessData)),
-            SliverToBoxAdapter(child: _buildStreakSection(context, fitnessData.streak)),
+            if (fitnessData.errorMessage != null)
+              SliverToBoxAdapter(child: _buildErrorBanner(fitnessData.errorMessage!)),
+            SliverToBoxAdapter(child: _buildStreakSection(context, fitnessData.streak, fitnessData.longestStreak)),
             SliverToBoxAdapter(child: _buildActivityRings(context, fitnessData)),
             SliverToBoxAdapter(child: _buildStats(context, fitnessData)),
             SliverToBoxAdapter(child: _buildHealthCards(context, fitnessData)),
@@ -101,7 +110,7 @@ class HomeScreen extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                if (fitness.notifications.isNotEmpty)
+                if (fitness.notifications.any((item) => (item['isNew'] ?? false) as bool))
                   Positioned(
                     right: 8,
                     top: 8,
@@ -122,7 +131,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStreakSection(BuildContext context, int streak) {
+  Widget _buildErrorBanner(String message) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(message, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ),
+    );
+  }
+
+  Widget _buildStreakSection(BuildContext context, int streak, int longestStreak) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
@@ -146,7 +169,7 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$streak weeks',
+                  '$streak days',
                   style: const TextStyle(
                     color: AppTheme.accent,
                     fontSize: 12,
@@ -157,7 +180,16 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          WeekDayStrip(currentDay: DateTime.now().weekday - 1), 
+          Row(
+            children: [
+              Expanded(child: WeekDayStrip(currentDay: DateTime.now().weekday - 1)),
+              const SizedBox(width: 12),
+              Text(
+                'Best $longestStreak d',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
         ],
       ),
     );

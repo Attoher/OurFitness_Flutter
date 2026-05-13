@@ -52,6 +52,52 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+
+  Future<void> _showResetPasswordDialog() async {
+    final auth = context.read<AuthService>();
+    final controller = TextEditingController(text: _emailController.text.trim());
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Reset Password', style: TextStyle(color: Colors.white)),
+        content: _buildTextField(
+          controller: controller,
+          label: 'Email',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final email = controller.text.trim();
+              if (email.isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Masukkan email terlebih dahulu')),
+                );
+                return;
+              }
+              final error = await auth.resetPassword(email);
+              if (!dialogContext.mounted) {
+                return;
+              }
+              if (error != null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(error)));
+                return;
+              }
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Reset password email sent')),
+              );
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

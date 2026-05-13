@@ -1,8 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
+
 import '../services/fitness_service.dart';
+import '../theme/app_theme.dart';
+
+enum _StatsRangeMode { week, month, custom }
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -12,57 +16,129 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  int _metricIndex = 0; // 0=Steps, 1=Calories
+  int _metricIndex = 0;
+  _StatsRangeMode _rangeMode = _StatsRangeMode.week;
+  DateTimeRange? _customRange;
 
-  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  DateTimeRange _effectiveRange() {
+    final now = DateTime.now();
+    switch (_rangeMode) {
+      case _StatsRangeMode.week:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6)),
+          end: DateTime(now.year, now.month, now.day),
+        );
+      case _StatsRangeMode.month:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29)),
+          end: DateTime(now.year, now.month, now.day),
+        );
+      case _StatsRangeMode.custom:
+        return _customRange ?? DateTimeRange(
+          start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 13)),
+          end: DateTime(now.year, now.month, now.day),
+        );
+    }
+  }
 
-  static const _baseSteps    = [8420.0, 6150.0, 9780.0, 7340.0, 10250.0, 5680.0, 4200.0];
-  static const _baseCalories = [  430.0,  310.0,  510.0,  380.0,   550.0,  280.0,  210.0];
-
-  List<double> _placeholder(List<double> base, int todayIdx) =>
-      List.generate(7, (i) {
-        if (i < todayIdx) return base[i];
-        if (i == todayIdx) return (base[i] * 0.48).roundToDouble();
-        return 0.0;
+  Future<void> _pickCustomRange() async {
+    final now = DateTime.now();
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 1),
+      lastDate: now,
+      initialDateRange: _customRange ?? DateTimeRange(
+        start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 13)),
+        end: DateTime(now.year, now.month, now.day),
+      ),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppTheme.accent,
+            surface: AppTheme.surface,
+          ),
+        ),
+        child: child ?? const SizedBox.shrink(),
+      ),
+    );
+    if (selected != null) {
+      setState(() {
+        _rangeMode = _StatsRangeMode.custom;
+        _customRange = selected;
       });
-
-  bool _allZero(List<double> d) => d.every((v) => v == 0.0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final data = context.watch<FitnessService>();
-    final todayIdx = DateTime.now().weekday - 1;
+    if (data.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
 
-    final rawData   = _metricIndex == 0 ? data.weeklySteps : data.weeklyCalories;
-    final isDemo    = _allZero(rawData);
-    final base      = _metricIndex == 0 ? _baseSteps : _baseCalories;
-    final weekData  = isDemo ? _placeholder(base, todayIdx) : rawData;
-
-    final total = weekData.fold(0.0, (a, b) => a + b);
-    final avg   = total / (todayIdx + 1).clamp(1, 7);
-    final best  = weekData.isEmpty ? 0.0 : weekData.reduce((a, b) => a > b ? a : b);
+    final range = _effectiveRange();
+    final records = data.recordsBetween(range.start, range.end);
+    final summary = data.snapshotBetween(range.start, range.end);
+    final hasData = records.any((record) => record.hasActivity);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context)),
+            SliverToBoxAdapter(child: _buildHeader(context, data.errorMessage)),
             SliverToBoxAdapter(child: _buildTodaySection(context, data)),
-            SliverToBoxAdapter(child: _buildMetricSelector(context)),
-            SliverToBoxAdapter(child: _buildWeeklyChart(context, weekData, todayIdx, isDemo)),
-            SliverToBoxAdapter(child: _buildSummaryRow(context, total, avg, best, isDemo)),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            SliverToBoxAdapter(child: _buildMetricSelector()),
+            SliverToBoxAdapter(child: _buildRangeSelector(context, range)),
+            if (!hasData)
+              SliverToBoxAdapter(child: _buildEmptyState())
+            else ...[
+              SliverToBoxAdapter(child: _buildChart(context, records)),
+              SliverToBoxAdapter(child: _buildSummaryRow(summary)),
+              SliverToBoxAdapter(child: _buildProgressInsight(summary)),
+            ],
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String? errorMessage) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Text('Statistics', style: Theme.of(context).textTheme.displaySmall),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Statistics', style: Theme.of(context).textTheme.displaySmall),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -75,40 +151,46 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           Text(
             'TODAY',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textMuted,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w700,
-            ),
+                  color: AppTheme.textMuted,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _TodayTile(
-                icon: Icons.directions_walk_rounded,
-                color: AppTheme.ringSteps,
-                rawValue: data.steps,
-                unit: 'steps',
-                progress: data.stepsProgress,
-                goal: _fmt(data.stepsGoal),
-              )),
+              Expanded(
+                child: _TodayTile(
+                  icon: Icons.directions_walk_rounded,
+                  color: AppTheme.ringSteps,
+                  rawValue: data.steps,
+                  unit: 'steps',
+                  progress: data.stepsProgress,
+                  goal: _compact(data.stepsGoal),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _TodayTile(
-                icon: Icons.local_fire_department_rounded,
-                color: AppTheme.ringCalories,
-                rawValue: data.calories,
-                unit: 'kcal',
-                progress: data.caloriesProgress,
-                goal: _fmt(data.caloriesGoal),
-              )),
+              Expanded(
+                child: _TodayTile(
+                  icon: Icons.local_fire_department_rounded,
+                  color: AppTheme.ringCalories,
+                  rawValue: data.calories,
+                  unit: 'kcal',
+                  progress: data.caloriesProgress,
+                  goal: _compact(data.caloriesGoal),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _TodayTile(
-                icon: Icons.timer_rounded,
-                color: AppTheme.ringMove,
-                rawValue: data.moveMinutes,
-                unit: 'min',
-                progress: data.moveMinutesProgress,
-                goal: '${data.moveMinutesGoal}',
-              )),
+              Expanded(
+                child: _TodayTile(
+                  icon: Icons.timer_rounded,
+                  color: AppTheme.ringMove,
+                  rawValue: data.moveMinutes,
+                  unit: 'min',
+                  progress: data.moveMinutesProgress,
+                  goal: '${data.moveMinutesGoal}',
+                ),
+              ),
             ],
           ),
         ],
@@ -116,7 +198,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildMetricSelector(BuildContext context) {
+  Widget _buildMetricSelector() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
@@ -128,17 +210,77 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         ),
         child: Row(
           children: [
-            _SegTab(label: 'Steps', selected: _metricIndex == 0, onTap: () => setState(() => _metricIndex = 0)),
-            _SegTab(label: 'Calories', selected: _metricIndex == 1, onTap: () => setState(() => _metricIndex = 1)),
+            _SegTab(
+              label: 'Steps',
+              selected: _metricIndex == 0,
+              onTap: () => setState(() => _metricIndex = 0),
+            ),
+            _SegTab(
+              label: 'Calories',
+              selected: _metricIndex == 1,
+              onTap: () => setState(() => _metricIndex = 1),
+            ),
+            _SegTab(
+              label: 'Move',
+              selected: _metricIndex == 2,
+              onTap: () => setState(() => _metricIndex = 2),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWeeklyChart(BuildContext context, List<double> weekData, int todayIdx, bool isDemo) {
-    double maxVal = weekData.isEmpty ? 1000 : weekData.reduce((a, b) => a > b ? a : b);
-    if (maxVal == 0) maxVal = 1000;
+  Widget _buildRangeSelector(BuildContext context, DateTimeRange range) {
+    final formatter = DateFormat('dd MMM');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _RangeChip(
+                      label: '7D',
+                      selected: _rangeMode == _StatsRangeMode.week,
+                      onTap: () => setState(() => _rangeMode = _StatsRangeMode.week),
+                    ),
+                    _RangeChip(
+                      label: '30D',
+                      selected: _rangeMode == _StatsRangeMode.month,
+                      onTap: () => setState(() => _rangeMode = _StatsRangeMode.month),
+                    ),
+                    _RangeChip(
+                      label: 'Custom',
+                      selected: _rangeMode == _StatsRangeMode.custom,
+                      onTap: _pickCustomRange,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${formatter.format(range.start)} - ${formatter.format(range.end)}',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChart(BuildContext context, List<DailyStatRecord> records) {
+    final values = records.map(_metricValue).toList();
+    var maxVal = values.fold<double>(0, (max, value) => value > max ? value : max);
+    if (maxVal <= 0) {
+      maxVal = 1;
+    }
+    final formatter = DateFormat(records.length > 14 ? 'd/M' : 'E');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -154,55 +296,31 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             Row(
               children: [
                 Text(
-                  _metricIndex == 0 ? 'Weekly Steps' : 'Weekly Calories',
+                  _chartTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                if (isDemo)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25), width: 0.8),
-                    ),
-                    child: Text(
-                      'Sample',
-                      style: TextStyle(
-                        color: AppTheme.accent.withValues(alpha: 0.75),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    'This week',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-                  ),
+                Text(
+                  'Synced from daily stats',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+                ),
               ],
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 160,
+              height: 190,
               child: BarChart(
                 BarChartData(
-                  maxY: maxVal * 1.3,
+                  maxY: maxVal * 1.25,
                   minY: 0,
                   barTouchData: BarTouchData(
-                    enabled: !isDemo,
+                    enabled: true,
                     touchTooltipData: BarTouchTooltipData(
                       getTooltipColor: (_) => AppTheme.surfaceLight,
-                      getTooltipItem: (group, _, rod, __) {
-                        final label = _metricIndex == 0
-                            ? '${rod.toY.toInt()} steps'
-                            : '${rod.toY.toInt()} kcal';
-                        return BarTooltipItem(
-                          label,
-                          const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                        );
-                      },
+                      getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                        '${rod.toY.toStringAsFixed(_metricIndex == 2 ? 0 : 0)} ${_metricUnit}',
+                        const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                   titlesData: FlTitlesData(
@@ -212,20 +330,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 24,
-                        getTitlesWidget: (val, _) {
-                          final i = val.toInt();
-                          if (i < 0 || i >= _days.length) return const SizedBox.shrink();
-                          final isToday = i == todayIdx;
+                        reservedSize: 26,
+                        getTitlesWidget: (value, _) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= records.length) {
+                            return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              _days[i],
-                              style: TextStyle(
-                                color: isToday ? AppTheme.accent : AppTheme.textMuted,
-                                fontSize: 10,
-                                fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                              ),
+                              formatter.format(records[index].date),
+                              style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
                             ),
                           );
                         },
@@ -242,105 +357,236 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   borderData: FlBorderData(show: false),
-                  barGroups: List.generate(weekData.length, (i) {
-                    final isToday = i == todayIdx;
-                    final isFuture = i > todayIdx;
-                    final val = weekData[i];
-
-                    if (isFuture || val == 0) {
-                      return BarChartGroupData(x: i, barRods: [
+                  barGroups: List.generate(records.length, (index) {
+                    final isToday = DateUtils.isSameDay(records[index].date, DateTime.now());
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
                         BarChartRodData(
-                          toY: maxVal * 0.08,
-                          color: Colors.white.withValues(alpha: 0.05),
-                          width: 22,
+                          toY: values[index],
+                          width: records.length > 20 ? 10 : 18,
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: isToday
+                                ? [_metricColor, _metricColor.withValues(alpha: 0.75)]
+                                : [
+                                    _metricColor.withValues(alpha: 0.25),
+                                    _metricColor.withValues(alpha: 0.55),
+                                  ],
+                          ),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                         ),
-                      ]);
-                    }
-
-                    return BarChartGroupData(x: i, barRods: [
-                      BarChartRodData(
-                        toY: val,
-                        gradient: isDemo
-                            ? LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: isToday
-                                    ? [
-                                        AppTheme.accent.withValues(alpha: 0.55),
-                                        AppTheme.accent.withValues(alpha: 0.85),
-                                      ]
-                                    : [
-                                        AppTheme.accent.withValues(alpha: 0.20),
-                                        AppTheme.accent.withValues(alpha: 0.40),
-                                      ],
-                              )
-                            : LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: isToday
-                                    ? [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.85)]
-                                    : [
-                                        AppTheme.accent.withValues(alpha: 0.30),
-                                        AppTheme.accent.withValues(alpha: 0.55),
-                                      ],
-                              ),
-                        width: 22,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                      ),
-                    ]);
+                      ],
+                    );
                   }),
                 ),
               ),
             ),
-            if (isDemo) ...[
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.info_outline_rounded, size: 11, color: AppTheme.textMuted.withValues(alpha: 0.5)),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Start a workout to see your real stats',
-                    style: TextStyle(
-                      color: AppTheme.textMuted.withValues(alpha: 0.5),
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryRow(BuildContext context, double total, double avg, double best, bool isDemo) {
-    final isSteps = _metricIndex == 0;
-    final unit    = isSteps ? '' : ' kcal';
-
-    String fmtBig(double v) {
-      if (isSteps && v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
-      return v.toInt().toString();
-    }
-
+  Widget _buildSummaryRow(ProgressSnapshot summary) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
         children: [
-          Expanded(child: _SummaryCard(label: 'Total', value: '${fmtBig(total)}$unit', dimmed: isDemo)),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Total',
+              value: _summaryValue(summary),
+            ),
+          ),
           const SizedBox(width: 10),
-          Expanded(child: _SummaryCard(label: 'Daily Avg', value: '${fmtBig(avg)}$unit', dimmed: isDemo)),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Goal Rate',
+              value: '${(summary.goalCompletionRate * 100).round()}%',
+            ),
+          ),
           const SizedBox(width: 10),
-          Expanded(child: _SummaryCard(label: 'Best Day', value: '${fmtBig(best)}$unit', dimmed: isDemo)),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Consistency',
+              value: '${(summary.consistencyScore * 100).round()}%',
+            ),
+          ),
         ],
       ),
     );
   }
 
-  String _fmt(int val) => val >= 1000 ? '${(val / 1000).toStringAsFixed(1)}k' : '$val';
+  Widget _buildProgressInsight(ProgressSnapshot summary) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.insights_rounded, color: AppTheme.accent, size: 18),
+                const SizedBox(width: 8),
+                const Text(
+                  'Progress tracking',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _trackingStatusColor(summary).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    summary.trackingStatus,
+                    style: TextStyle(
+                      color: _trackingStatusColor(summary),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(child: _InsightStat(label: 'Workouts', value: '${summary.totalWorkouts}')),
+                Expanded(child: _InsightStat(label: 'Active days', value: '${summary.activeDays}')),
+                Expanded(
+                  child: _InsightStat(
+                    label: 'Distance',
+                    value: '${summary.totalDistanceKm.toStringAsFixed(1)} km',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Status ini dihitung dari goal completion rate dan consistency score agar progres terasa nyata, bukan hanya tampilan.',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.bar_chart_rounded, size: 42, color: AppTheme.textMuted.withValues(alpha: 0.55)),
+            const SizedBox(height: 14),
+            const Text(
+              'Belum ada statistik untuk rentang ini',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Selesaikan workout terlebih dahulu agar chart, KPI, dan progress tracking terisi otomatis.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _metricValue(DailyStatRecord record) {
+    switch (_metricIndex) {
+      case 0:
+        return record.steps.toDouble();
+      case 1:
+        return record.calories.toDouble();
+      case 2:
+        return record.moveMinutes.toDouble();
+      default:
+        return 0;
+    }
+  }
+
+  String get _chartTitle {
+    switch (_metricIndex) {
+      case 0:
+        return 'Steps trend';
+      case 1:
+        return 'Calories trend';
+      case 2:
+        return 'Active minutes trend';
+      default:
+        return 'Trend';
+    }
+  }
+
+  String get _metricUnit {
+    switch (_metricIndex) {
+      case 0:
+        return 'steps';
+      case 1:
+        return 'kcal';
+      case 2:
+        return 'min';
+      default:
+        return '';
+    }
+  }
+
+  Color get _metricColor {
+    switch (_metricIndex) {
+      case 0:
+        return AppTheme.ringSteps;
+      case 1:
+        return AppTheme.ringCalories;
+      case 2:
+        return AppTheme.ringMove;
+      default:
+        return AppTheme.accent;
+    }
+  }
+
+  String _summaryValue(ProgressSnapshot summary) {
+    switch (_metricIndex) {
+      case 0:
+        return _compact(summary.totalSteps);
+      case 1:
+        return '${summary.totalCalories}';
+      case 2:
+        return '${summary.totalMoveMinutes}';
+      default:
+        return '0';
+    }
+  }
+
+  Color _trackingStatusColor(ProgressSnapshot summary) {
+    switch (summary.trackingStatus) {
+      case 'On track':
+        return AppTheme.accent;
+      case 'Needs focus':
+        return Colors.orangeAccent;
+      default:
+        return Colors.redAccent;
+    }
+  }
+
+  String _compact(int value) => value >= 1000 ? '${(value / 1000).toStringAsFixed(1)}k' : '$value';
 }
 
 class _TodayTile extends StatelessWidget {
@@ -375,18 +621,10 @@ class _TodayTile extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 16),
           const SizedBox(height: 8),
-          rawValue == 0
-              ? const Text('--', style: TextStyle(color: AppTheme.textSecondary, fontSize: 17, fontWeight: FontWeight.w700))
-              : TweenAnimationBuilder<double>(
-                  key: ValueKey(rawValue),
-                  tween: Tween(begin: 0, end: rawValue.toDouble()),
-                  duration: const Duration(milliseconds: 1200),
-                  curve: Curves.easeOut,
-                  builder: (_, val, __) => Text(
-                    _fmt(val.toInt()),
-                    style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
-                  ),
-                ),
+          Text(
+            _fmt(rawValue),
+            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+          ),
           Text(unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
           const SizedBox(height: 8),
           ClipRRect(
@@ -445,9 +683,8 @@ class _SegTab extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final String label;
   final String value;
-  final bool dimmed;
 
-  const _SummaryCard({required this.label, required this.value, this.dimmed = false});
+  const _SummaryCard({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -464,11 +701,7 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             value,
-            style: TextStyle(
-              color: dimmed ? Colors.white.withValues(alpha: 0.45) : Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -476,3 +709,57 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
+class _InsightStat extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InsightStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _RangeChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RangeChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppTheme.accent.withValues(alpha: 0.28) : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppTheme.accent : AppTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}

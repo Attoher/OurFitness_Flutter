@@ -10,19 +10,42 @@ class GamificationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fitnessData = context.watch<FitnessService>();
-    
+
+    if (fitnessData.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, fitnessData)),
+            if (fitnessData.errorMessage != null)
+              SliverToBoxAdapter(child: _buildErrorBanner(fitnessData.errorMessage!)),
             SliverToBoxAdapter(child: _buildStreakCard(context, fitnessData)),
             SliverToBoxAdapter(child: _buildBadgesSection(context, fitnessData)),
             SliverToBoxAdapter(child: _buildChallengesSection(context, fitnessData)),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(message, style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ),
     );
   }
@@ -109,7 +132,7 @@ class GamificationScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${data.streak} Weeks',
+                  '${data.streak} Days',
                   style: const TextStyle(
                     color: AppTheme.background,
                     fontSize: 32,
@@ -118,7 +141,7 @@ class GamificationScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${data.streak * 7} days in a row!',
+                  'Best streak: ${data.longestStreak} days',
                   style: TextStyle(
                     color: AppTheme.background.withValues(alpha: 0.7),
                     fontSize: 12,
@@ -204,6 +227,7 @@ class GamificationScreen extends StatelessWidget {
   }
 
   Widget _buildChallengesSection(BuildContext context, FitnessService data) {
+    final weeklyChallenges = data.weeklyChallenges;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -211,13 +235,30 @@ class GamificationScreen extends StatelessWidget {
         children: [
           Text('Weekly Challenges', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 14),
+          ...weeklyChallenges.map((challenge) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _ChallengeCard(
+                  icon: challenge.icon,
+                  title: challenge.title,
+                  progress: challenge.progress,
+                  current: '${challenge.current} ${challenge.unit}',
+                  goal: '${challenge.target} ${challenge.unit}',
+                ),
+              )),
+          const SizedBox(height: 10),
+          Text('Daily Goals', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
           _ChallengeCard(
             icon: Icons.directions_walk_rounded,
             title: 'Daily Steps Goal',
             progress: data.stepsProgress,
             current: '${data.steps} steps',
             goal: '${data.stepsGoal} steps',
-            onEdit: () => _showEditGoalDialog(context, 'Steps Goal', data.stepsGoal, 'steps',
+            onEdit: () => _showEditGoalDialog(
+              context,
+              'Steps Goal',
+              data.stepsGoal,
+              'steps',
               (val) => data.updateGoals(stepsGoal: val),
             ),
           ),
@@ -228,7 +269,11 @@ class GamificationScreen extends StatelessWidget {
             progress: data.caloriesProgress,
             current: '${data.calories} kcal',
             goal: '${data.caloriesGoal} kcal',
-            onEdit: () => _showEditGoalDialog(context, 'Calories Goal', data.caloriesGoal, 'kcal',
+            onEdit: () => _showEditGoalDialog(
+              context,
+              'Calories Goal',
+              data.caloriesGoal,
+              'kcal',
               (val) => data.updateGoals(caloriesGoal: val),
             ),
           ),
@@ -239,7 +284,11 @@ class GamificationScreen extends StatelessWidget {
             progress: data.moveMinutesProgress,
             current: '${data.moveMinutes} min',
             goal: '${data.moveMinutesGoal} min',
-            onEdit: () => _showEditGoalDialog(context, 'Move Minutes Goal', data.moveMinutesGoal, 'min',
+            onEdit: () => _showEditGoalDialog(
+              context,
+              'Move Minutes Goal',
+              data.moveMinutesGoal,
+              'min',
               (val) => data.updateGoals(moveMinutesGoal: val),
             ),
           ),
@@ -253,7 +302,7 @@ class GamificationScreen extends StatelessWidget {
     String title,
     int currentGoal,
     String unit,
-    Future<void> Function(int) onSave,
+    Future<String?> Function(int) onSave,
   ) {
     final controller = TextEditingController(text: currentGoal.toString());
     showModalBottomSheet(
@@ -292,11 +341,17 @@ class GamificationScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final val = int.tryParse(controller.text);
                   if (val != null && val > 0) {
-                    onSave(val);
-                    Navigator.pop(ctx);
+                    final error = await onSave(val);
+                    if (ctx.mounted && error != null) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(error)));
+                      return;
+                    }
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                    }
                   }
                 },
                 child: const Text('Save Goal'),

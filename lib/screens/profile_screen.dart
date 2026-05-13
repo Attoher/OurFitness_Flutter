@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../services/fitness_service.dart';
+
 import '../services/auth_service.dart';
+import '../services/fitness_service.dart';
+import '../theme/app_theme.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,17 +13,32 @@ class ProfileScreen extends StatelessWidget {
     final fitnessData = context.watch<FitnessService>();
     final authService = context.watch<AuthService>();
     final user = authService.user;
-    final userName = fitnessData.displayName != 'User' ? fitnessData.displayName : (user?.displayName ?? 'User');
-    
+    final userName = fitnessData.displayName != 'User'
+        ? fitnessData.displayName
+        : (user?.displayName ?? 'User');
+    final weekSummary = fitnessData.snapshotBetween(
+      DateTime.now().subtract(const Duration(days: 6)),
+      DateTime.now(),
+    );
+
+    if (fitnessData.isLoading) {
+      return const Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context)),
+            if (fitnessData.errorMessage != null)
+              SliverToBoxAdapter(child: _buildErrorBanner(fitnessData.errorMessage!)),
             SliverToBoxAdapter(child: _buildProfileCard(context, userName, fitnessData)),
             SliverToBoxAdapter(child: _buildConnectedDevice(context, fitnessData)),
-            SliverToBoxAdapter(child: _buildWeeklyGoals(context, fitnessData)),
+            SliverToBoxAdapter(child: _buildWeeklyGoals(context, fitnessData, weekSummary)),
             SliverToBoxAdapter(child: _buildDailySummary(context, fitnessData)),
             SliverToBoxAdapter(child: _buildOptions(context, fitnessData, authService)),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
@@ -44,6 +60,20 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildErrorBanner(String message) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(message, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ),
+    );
+  }
+
   Widget _buildProfileCard(BuildContext context, String name, FitnessService fitness) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -55,7 +85,6 @@ class ProfileScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
             Container(
               width: 64,
               height: 64,
@@ -63,7 +92,10 @@ class ProfileScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppTheme.accent, width: 2),
                 gradient: LinearGradient(
-                  colors: [AppTheme.accent.withValues(alpha: 0.3), AppTheme.accentDark.withValues(alpha: 0.5)],
+                  colors: [
+                    AppTheme.accent.withValues(alpha: 0.3),
+                    AppTheme.accentDark.withValues(alpha: 0.5),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -77,14 +109,16 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
+                  Text(name, style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 4),
                   Text(
                     'Age: ${fitness.age} | Height: ${fitness.height.toInt()}cm | Weight: ${fitness.weight.toInt()}kg',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Timezone: ${fitness.timezone} • Level ${fitness.level}',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                   ),
                 ],
               ),
@@ -142,25 +176,19 @@ class ProfileScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 2),
-                      if (fitness.isDeviceConnected)
-                        Row(
-                          children: [
-                            const Icon(Icons.battery_4_bar_rounded, color: AppTheme.accent, size: 14),
-                            const SizedBox(width: 4),
-                            Text('${fitness.batteryLevel}%', style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.accent, fontSize: 11,
-                            )),
-                          ],
-                        )
-                      else
-                        Text('Tap to connect', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11)),
+                      Text(
+                        fitness.isDeviceConnected
+                            ? 'Battery ${fitness.batteryLevel}%'
+                            : 'Hubungkan wearable untuk data real-time',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                      ),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: fitness.isDeviceConnected 
+                    color: fitness.isDeviceConnected
                         ? AppTheme.accent.withValues(alpha: 0.15)
                         : AppTheme.textMuted.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -182,7 +210,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWeeklyGoals(BuildContext context, FitnessService data) {
+  Widget _buildWeeklyGoals(
+    BuildContext context,
+    FitnessService data,
+    ProgressSnapshot weekSummary,
+  ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Container(
@@ -195,7 +227,7 @@ class ProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'WEEKLY GOALS',
+              'WEEKLY PROGRESS',
               style: TextStyle(
                 color: AppTheme.textMuted,
                 fontSize: 10,
@@ -207,10 +239,46 @@ class ProfileScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                const _GoalItem(icon: Icons.location_on_rounded, value: '5.5 km', label: 'Distance'),
-                _GoalItem(icon: Icons.local_fire_department_rounded, value: '${data.caloriesGoal * 7} kcal', label: 'Calories'),
-                const _GoalItem(icon: Icons.timer_rounded, value: '4h 46m', label: 'Duration'),
+                _GoalItem(
+                  icon: Icons.directions_walk_rounded,
+                  value: '${weekSummary.totalSteps}',
+                  label: 'Steps',
+                ),
+                _GoalItem(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${weekSummary.totalCalories} kcal',
+                  label: 'Calories',
+                ),
+                _GoalItem(
+                  icon: Icons.timer_rounded,
+                  value: '${weekSummary.totalMoveMinutes} min',
+                  label: 'Active',
+                ),
               ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.track_changes_rounded, color: AppTheme.accent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tracking status: ${weekSummary.trackingStatus}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                  Text(
+                    '${(weekSummary.goalCompletionRate * 100).round()}%',
+                    style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -235,7 +303,12 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Text(
                   'DAILY SUMMARY',
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
+                  style: TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
                 ),
                 Icon(Icons.sunny, color: AppTheme.accent, size: 18),
               ],
@@ -247,7 +320,6 @@ class ProfileScreen extends StatelessWidget {
               rawValue: data.steps,
               unit: 'steps',
               progress: data.stepsProgress,
-              goal: data.stepsGoal,
             ),
             const SizedBox(height: 10),
             _DailySummaryRow(
@@ -256,7 +328,6 @@ class ProfileScreen extends StatelessWidget {
               rawValue: data.calories,
               unit: 'kcal',
               progress: data.caloriesProgress,
-              goal: data.caloriesGoal,
             ),
             const SizedBox(height: 10),
             _DailySummaryRow(
@@ -265,7 +336,6 @@ class ProfileScreen extends StatelessWidget {
               rawValue: data.moveMinutes,
               unit: 'min active',
               progress: data.moveMinutesProgress,
-              goal: data.moveMinutesGoal,
             ),
           ],
         ),
@@ -282,6 +352,12 @@ class ProfileScreen extends StatelessWidget {
             icon: Icons.person_outline_rounded,
             label: 'Edit Personal Details',
             onTap: () => _showEditProfileDialog(context, fitnessData),
+          ),
+          const SizedBox(height: 10),
+          _OptionTile(
+            icon: Icons.notifications_active_outlined,
+            label: 'Daily Reminder Settings',
+            onTap: () => _showReminderSettingsDialog(context, fitnessData),
           ),
           const SizedBox(height: 10),
           _OptionTile(
@@ -305,15 +381,16 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-  void _showEditProfileDialog(BuildContext context, FitnessService fitness) {
+
+  Future<void> _showEditProfileDialog(BuildContext context, FitnessService fitness) async {
     final nameController = TextEditingController(text: fitness.displayName);
     final ageController = TextEditingController(text: fitness.age.toString());
     final heightController = TextEditingController(text: fitness.height.toInt().toString());
     final weightController = TextEditingController(text: fitness.weight.toInt().toString());
 
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
         content: SingleChildScrollView(
@@ -331,15 +408,25 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              fitness.updateProfile(
+            onPressed: () async {
+              final error = await fitness.updateProfile(
                 name: nameController.text,
                 age: int.tryParse(ageController.text),
                 height: double.tryParse(heightController.text),
                 weight: double.tryParse(weightController.text),
+              );
+              if (!dialogContext.mounted) {
+                return;
+              }
+              if (error != null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(error)));
+                return;
+              }
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Profile updated successfully')),
               );
             },
             child: const Text('Save'),
@@ -349,23 +436,177 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showChangePasswordDialog(BuildContext context, AuthService auth) {
-    final passwordController = TextEditingController();
-    showDialog(
+  Future<void> _showReminderSettingsDialog(BuildContext context, FitnessService fitness) async {
+    var settings = fitness.reminderSettings;
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (modalContext, setState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              24,
+              20,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Daily reminder',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  value: settings.enabled,
+                  activeColor: AppTheme.accent,
+                  onChanged: (value) => setState(() => settings = settings.copyWith(enabled: value)),
+                  title: const Text('Enable reminder', style: TextStyle(color: Colors.white)),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Reminder time', style: TextStyle(color: Colors.white)),
+                  subtitle: Text(settings.formattedTime, style: const TextStyle(color: AppTheme.textSecondary)),
+                  trailing: const Icon(Icons.schedule_rounded, color: AppTheme.accent),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: sheetContext,
+                      initialTime: TimeOfDay(hour: settings.hour, minute: settings.minute),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        settings = settings.copyWith(hour: picked.hour, minute: picked.minute);
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                const Text('Reminder type', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _ChoiceChip(
+                      label: 'Workout',
+                      selected: settings.type == 'workout',
+                      onTap: () => setState(() => settings = settings.copyWith(type: 'workout')),
+                    ),
+                    _ChoiceChip(
+                      label: 'Recovery',
+                      selected: settings.type == 'recovery',
+                      onTap: () => setState(() => settings = settings.copyWith(type: 'recovery')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Active days', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: List.generate(7, (index) {
+                    final weekday = index + 1;
+                    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    final isSelected = settings.days.contains(weekday);
+                    return _ChoiceChip(
+                      label: labels[index],
+                      selected: isSelected,
+                      onTap: () {
+                        final days = {...settings.days};
+                        if (isSelected) {
+                          days.remove(weekday);
+                        } else {
+                          days.add(weekday);
+                        }
+                        setState(() => settings = settings.copyWith(days: days));
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  value: settings.notifyAchievements,
+                  activeColor: AppTheme.accent,
+                  onChanged: (value) => setState(() => settings = settings.copyWith(notifyAchievements: value)),
+                  title: const Text('Achievement notifications', style: TextStyle(color: Colors.white)),
+                ),
+                SwitchListTile(
+                  value: settings.notifyWorkouts,
+                  activeColor: AppTheme.accent,
+                  onChanged: (value) => setState(() => settings = settings.copyWith(notifyWorkouts: value)),
+                  title: const Text('Workout notifications', style: TextStyle(color: Colors.white)),
+                ),
+                SwitchListTile(
+                  value: settings.notifyReminders,
+                  activeColor: AppTheme.accent,
+                  onChanged: (value) => setState(() => settings = settings.copyWith(notifyReminders: value)),
+                  title: const Text('Reminder notifications', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final error = await fitness.updateReminderSettings(settings);
+                      if (!sheetContext.mounted) {
+                        return;
+                      }
+                      if (error != null) {
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(content: Text(error)));
+                        return;
+                      }
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Reminder settings updated')),
+                      );
+                    },
+                    child: const Text('Save reminder settings'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showChangePasswordDialog(BuildContext context, AuthService auth) async {
+    final passwordController = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: const Text('Change Password', style: TextStyle(color: Colors.white)),
         content: _buildTextField(passwordController, 'New Password', isPassword: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              final error = await auth.changePassword(passwordController.text);
-              if (error != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+              if (passwordController.text.length < 6) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Password minimal 6 karakter')),
+                );
+                return;
               }
+              final error = await auth.changePassword(passwordController.text);
+              if (!dialogContext.mounted) {
+                return;
+              }
+              if (error != null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(error)));
+                return;
+              }
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Password updated successfully')),
+              );
             },
             child: const Text('Update'),
           ),
@@ -374,7 +615,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {bool isNumber = false, bool isPassword = false}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    bool isNumber = false,
+    bool isPassword = false,
+  }) {
     return TextField(
       controller: controller,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
@@ -383,8 +629,14 @@ class ProfileScreen extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppTheme.textSecondary),
-        enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: AppTheme.surfaceLight),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: AppTheme.accent),
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
@@ -396,7 +648,6 @@ class _DailySummaryRow extends StatelessWidget {
   final int rawValue;
   final String unit;
   final double progress;
-  final int goal;
 
   const _DailySummaryRow({
     required this.icon,
@@ -404,7 +655,6 @@ class _DailySummaryRow extends StatelessWidget {
     required this.rawValue,
     required this.unit,
     required this.progress,
-    required this.goal,
   });
 
   String _fmt(int val) => val >= 1000 ? '${(val / 1000).toStringAsFixed(1)}k' : '$val';
@@ -417,15 +667,9 @@ class _DailySummaryRow extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 16),
             const SizedBox(width: 8),
-            TweenAnimationBuilder<double>(
-              key: ValueKey(rawValue),
-              tween: Tween(begin: 0, end: rawValue.toDouble()),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOut,
-              builder: (_, val, __) => Text(
-                _fmt(val.toInt()),
-                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
-              ),
+            Text(
+              _fmt(rawValue),
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(width: 5),
             Text(unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
@@ -468,7 +712,7 @@ class _GoalItem extends StatelessWidget {
       children: [
         Icon(icon, size: 22, color: AppTheme.accent),
         const SizedBox(height: 4),
-        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        Text(value, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
@@ -496,11 +740,41 @@ class _OptionTile extends StatelessWidget {
           children: [
             Icon(icon, color: AppTheme.textSecondary, size: 20),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.titleMedium),
-            ),
+            Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium)),
             const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ChoiceChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? AppTheme.accent.withValues(alpha: 0.3) : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppTheme.accent : AppTheme.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

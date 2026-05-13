@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+
 import 'firebase_options.dart';
-import 'theme/app_theme.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_scaffold.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/main_scaffold.dart';
-import 'screens/login_screen.dart';
-import 'services/fitness_service.dart';
 import 'services/auth_service.dart';
+import 'services/fitness_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase (wrapped in try-catch for cases where config is missing)
+
+  var firebaseReady = false;
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    firebaseReady = true;
   } catch (e) {
-    debugPrint("Firebase not initialized: Check your google-services.json / GoogleService-Info.plist");
+    debugPrint('Firebase not initialized: Check your google-services.json / GoogleService-Info.plist');
+    debugPrint('$e');
   }
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -31,8 +34,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => FitnessService()),
-        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => FitnessService(useFirebase: firebaseReady)),
+        ChangeNotifierProvider(create: (_) => AuthService(useFirebase: firebaseReady)),
       ],
       child: const OurFitnessApp(),
     ),
@@ -48,7 +51,7 @@ class OurFitnessApp extends StatelessWidget {
       title: 'OurFitness',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const SplashScreen(), 
+      home: const SplashScreen(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
         '/auth': (context) => const AuthWrapper(),
@@ -65,12 +68,9 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
-    
-    // If user is authenticated, show Home, else Login
     if (authService.isAuthenticated) {
       return const MainScaffold();
-    } else {
-      return const LoginScreen();
     }
+    return const LoginScreen();
   }
 }
