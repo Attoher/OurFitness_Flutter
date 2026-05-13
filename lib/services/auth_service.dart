@@ -77,6 +77,9 @@ class AuthService extends ChangeNotifier {
     if (_auth == null) {
       return 'Firebase authentication is not configured.';
     }
+    if (newPassword.length < 6) {
+      return 'Password must be at least 6 characters.';
+    }
     try {
       await _user?.updatePassword(newPassword);
       return null;

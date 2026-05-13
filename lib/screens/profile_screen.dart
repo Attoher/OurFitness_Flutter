@@ -589,12 +589,6 @@ class ProfileScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              if (passwordController.text.length < 6) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Password minimal 6 karakter')),
-                );
-                return;
-              }
               final error = await auth.changePassword(passwordController.text);
               if (!dialogContext.mounted) {
                 return;

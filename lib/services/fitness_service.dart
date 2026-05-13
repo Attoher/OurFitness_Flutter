@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 const _defaultStepsGoal = 5500;
 const _defaultCaloriesGoal = 500;
 const _defaultMoveGoal = 50;
+const _levelXpMultiplier = 1.35;
 
 class DailyStatRecord {
   final DateTime date;
@@ -1532,7 +1533,7 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
     while (xp >= levelThreshold) {
       xp -= levelThreshold;
       level += 1;
-      levelThreshold = (levelThreshold * 1.35).round();
+      levelThreshold = (levelThreshold * _levelXpMultiplier).round();
     }
     return _LevelProgress(level: level, currentXp: xp, nextLevelXp: levelThreshold);
   }
