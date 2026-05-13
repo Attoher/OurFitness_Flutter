@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' show StreamSubscription, Timer, unawaited;
 import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -490,21 +490,21 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
     int? moveMinutesGoal,
   }) async {
     if (!_canWriteToFirebase) {
-      return 'Firebase belum dikonfigurasi.';
+      return 'Firebase is not configured.';
     }
     if (stepsGoal != null && stepsGoal <= 0) {
-      return 'Steps goal harus lebih dari 0.';
+      return 'Steps goal must be greater than 0.';
     }
     if (caloriesGoal != null && caloriesGoal <= 0) {
-      return 'Calories goal harus lebih dari 0.';
+      return 'Calories goal must be greater than 0.';
     }
     if (moveMinutesGoal != null && moveMinutesGoal <= 0) {
-      return 'Move minutes goal harus lebih dari 0.';
+      return 'Move minutes goal must be greater than 0.';
     }
 
     final uid = _auth!.currentUser?.uid;
     if (uid == null) {
-      return 'User belum login.';
+      return 'User is not signed in.';
     }
 
     final updates = <String, dynamic>{'updatedAt': FieldValue.serverTimestamp()};
@@ -545,25 +545,25 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
     double? weight,
   }) async {
     if (!_canWriteToFirebase) {
-      return 'Firebase belum dikonfigurasi.';
+      return 'Firebase is not configured.';
     }
     final uid = _auth!.currentUser?.uid;
     if (uid == null) {
-      return 'User belum login.';
+      return 'User is not signed in.';
     }
 
     final trimmedName = name?.trim();
     if (trimmedName != null && trimmedName.isEmpty) {
-      return 'Nama tidak boleh kosong.';
+      return 'Display name cannot be empty.';
     }
     if (age != null && (age < 10 || age > 100)) {
-      return 'Usia harus di antara 10 dan 100 tahun.';
+      return 'Age must be between 10 and 100.';
     }
     if (height != null && (height < 80 || height > 250)) {
-      return 'Tinggi badan harus di antara 80 dan 250 cm.';
+      return 'Height must be between 80 and 250 cm.';
     }
     if (weight != null && (weight < 20 || weight > 300)) {
-      return 'Berat badan harus di antara 20 dan 300 kg.';
+      return 'Weight must be between 20 and 300 kg.';
     }
 
     final updates = <String, dynamic>{
@@ -607,14 +607,14 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<String?> updateReminderSettings(ReminderSettings settings) async {
     if (!_canWriteToFirebase) {
-      return 'Firebase belum dikonfigurasi.';
+      return 'Firebase is not configured.';
     }
     final uid = _auth!.currentUser?.uid;
     if (uid == null) {
-      return 'User belum login.';
+      return 'User is not signed in.';
     }
     if (settings.days.isEmpty && settings.enabled) {
-      return 'Pilih minimal satu hari untuk reminder.';
+      return 'Select at least one reminder day.';
     }
 
     _reminderSettings = settings;

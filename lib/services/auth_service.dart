@@ -22,7 +22,7 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> signIn(String email, String password) async {
     if (_auth == null) {
-      return 'Firebase authentication belum dikonfigurasi.';
+      return 'Firebase authentication is not configured.';
     }
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
@@ -36,7 +36,7 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> signUp(String email, String password, String name) async {
     if (_auth == null) {
-      return 'Firebase authentication belum dikonfigurasi.';
+      return 'Firebase authentication is not configured.';
     }
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -61,7 +61,7 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> resetPassword(String email) async {
     if (_auth == null) {
-      return 'Firebase authentication belum dikonfigurasi.';
+      return 'Firebase authentication is not configured.';
     }
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -75,7 +75,7 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> changePassword(String newPassword) async {
     if (_auth == null) {
-      return 'Firebase authentication belum dikonfigurasi.';
+      return 'Firebase authentication is not configured.';
     }
     try {
       await _user?.updatePassword(newPassword);
@@ -89,7 +89,7 @@ class AuthService extends ChangeNotifier {
 
   Future<String?> updateDisplayName(String name) async {
     if (_auth == null) {
-      return 'Firebase authentication belum dikonfigurasi.';
+      return 'Firebase authentication is not configured.';
     }
     try {
       await _user?.updateDisplayName(name);
