@@ -669,8 +669,8 @@ class FitnessService extends ChangeNotifier with WidgetsBindingObserver {
       final userData = userSnap.data() ?? <String, dynamic>{};
       final currentSteps = (data['steps'] ?? 0) as int;
       final newSteps = currentSteps + count;
-      final newCalories = math.max((newSteps * 0.04).round(), (data['calories'] ?? 0) as int);
-      final moveMinutes = math.max((newSteps * 0.01).round(), (data['moveMinutes'] ?? 0) as int);
+      final newCalories = (newSteps * 0.04).round();
+      final moveMinutes = (newSteps * 0.01).round();
       final xpEarned = math.max(5, (count * 0.08).round());
       final gamification = _readGamification(userData);
       final leveled = _applyXp(
