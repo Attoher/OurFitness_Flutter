@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import 'running_tracker_screen.dart';
+import 'package:video_player/video_player.dart';
 
 class WarmupScreen extends StatefulWidget {
   final Sport sport;
@@ -19,6 +20,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
   bool _isPlaying = true;
   Timer? _timer;
   int _currentPhase = 0;
+  late VideoPlayerController _videoController;
 
   final List<Map<String, String>> _phases = [
     {'phase': 'Phase 1: Mobilization', 'step': '1/3'},
@@ -30,6 +32,16 @@ class _WarmupScreenState extends State<WarmupScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    
+    // Video initialization
+    _videoController = VideoPlayerController.asset('assets/videos/jumping_jack.mp4')
+      ..initialize().then((_) {
+        setState(() {});
+        _videoController.setLooping(true);
+        if (_isPlaying) {
+          _videoController.play();
+        }
+      });
   }
 
   void _startTimer() {
@@ -58,8 +70,10 @@ class _WarmupScreenState extends State<WarmupScreen> {
     setState(() => _isPlaying = !_isPlaying);
     if (_isPlaying) {
       _startTimer();
+      _videoController.play(); 
     } else {
       _timer?.cancel();
+      _videoController.pause(); 
     }
   }
 
@@ -75,6 +89,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -157,34 +172,28 @@ class _WarmupScreenState extends State<WarmupScreen> {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     color: const Color(0xFFD4C9B0),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Warmup figure illustration
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 160,
-                                height: 240,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFD4C9B0).withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(12),
+                    width: double.infinity,
+                    height: double.infinity, 
+                    child: _videoController.value.hasError
+                        ? const Center(
+                            child: Icon(
+                              Icons.accessibility_new_rounded, 
+                              size: 80, 
+                              color: AppTheme.accent,
+                            ),
+                          )
+                        : _videoController.value.isInitialized
+                            ? FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: _videoController.value.size.width,
+                                  height: _videoController.value.size.height,
+                                  child: VideoPlayer(_videoController),
                                 ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.self_improvement_rounded,
-                                    size: 80,
-                                    color: AppTheme.accent,
-                                  ),
-                                ),
+                              )
+                            : const Center(
+                                child: CircularProgressIndicator(color: AppTheme.accent),
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ),

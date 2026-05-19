@@ -350,26 +350,74 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showChangePasswordDialog(BuildContext context, AuthService auth) {
-    final passwordController = TextEditingController();
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    bool isOldHidden = true;
+    bool isNewHidden = true;
+    bool isLoading = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Change Password', style: TextStyle(color: Colors.white)),
-        content: _buildTextField(passwordController, 'New Password', isPassword: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final error = await auth.changePassword(passwordController.text);
-              if (error != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          Widget buildPasswordField(TextEditingController controller, String label, bool isHidden, VoidCallback toggle) {
+            return TextField(
+              controller: controller,
+              obscureText: isHidden,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: label,
+                labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                suffixIcon: IconButton(
+                  icon: Icon(isHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: AppTheme.textSecondary),
+                  onPressed: toggle,
+                ),
+                enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+
+          return AlertDialog(
+            backgroundColor: AppTheme.surface,
+            title: const Text('Change Password', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                buildPasswordField(oldPasswordController, 'Old Password', isOldHidden, () => setState(() => isOldHidden = !isOldHidden)),
+                const SizedBox(height: 12),
+                buildPasswordField(newPasswordController, 'New Password', isNewHidden, () => setState(() => isNewHidden = !isNewHidden)),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: isLoading ? null : () async {
+                  if (oldPasswordController.text.isEmpty || newPasswordController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+                    return;
+                  }
+                  
+                  setState(() => isLoading = true);
+                  final error = await auth.changePasswordWithAuth(oldPasswordController.text, newPasswordController.text);
+                  
+                  if (context.mounted) {
+                    setState(() => isLoading = false);
+                    if (error != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.redAccent));
+                    } else {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!'), backgroundColor: Colors.green));
+                    }
+                  }
+                },
+                child: isLoading 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Update'),
+              ),
+            ],
+          );
+        }
       ),
     );
   }

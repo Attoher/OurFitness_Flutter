@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _nameController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
+  bool _isPasswordHidden = true;
 
   Future<void> _submit() async {
     final auth = context.read<AuthService>();
@@ -220,13 +221,27 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword,
+        obscureText: isPassword ? _isPasswordHidden : false, 
         keyboardType: keyboardType,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           prefixIcon: Icon(icon, color: AppTheme.accent.withValues(alpha: 0.7), size: 20),
+          suffixIcon: isPassword 
+              ? IconButton(
+                  icon: Icon(
+                    _isPasswordHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordHidden = !_isPasswordHidden;
+                    });
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),

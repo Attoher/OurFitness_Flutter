@@ -84,4 +84,27 @@ class AuthService extends ChangeNotifier {
       return 'An unexpected error occurred';
     }
   }
+
+  // Change Password with Re-authentication
+  Future<String?> changePasswordWithAuth(String oldPassword, String newPassword) async {
+    try {
+      if (_user == null || _user!.email == null) return 'User not found';
+      
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: _user!.email!,
+        password: oldPassword,
+      );
+      await _user!.reauthenticateWithCredential(credential);
+      
+      await _user!.updatePassword(newPassword);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        return 'Incorrect old password';
+      }
+      return e.message;
+    } catch (e) {
+      return 'An unexpected error occurred';
+    }
+  }
 }
