@@ -158,29 +158,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                if (isDemo)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25), width: 0.8),
-                    ),
-                    child: Text(
-                      'Sample',
-                      style: TextStyle(
-                        color: AppTheme.accent.withValues(alpha: 0.75),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    'This week',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-                  ),
               ],
             ),
             const SizedBox(height: 16),
