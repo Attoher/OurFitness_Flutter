@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.fitness_center_rounded, color: AppTheme.background, size: 30),
+                    child: Icon(Icons.fitness_center_rounded, color: AppTheme.background, size: 30),
                   ),
                   const SizedBox(height: 30),
                   Text(
@@ -164,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         elevation: 0,
                       ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.background),
@@ -188,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: () => setState(() => _isLogin = !_isLogin),
                         child: Text(
                           _isLogin ? 'Sign Up' : 'Sign In',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.accent,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

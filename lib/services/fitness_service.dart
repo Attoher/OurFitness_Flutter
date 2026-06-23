@@ -124,9 +124,28 @@ class FitnessService extends ChangeNotifier {
     _firestore.collection('users').doc(uid).collection('notifications').orderBy('time', descending: true).snapshots().listen((snapshot) {
       _notifications = snapshot.docs.map((doc) {
         final data = doc.data();
+        final raw = data['time'];
+        String timeStr = '';
+        if (raw is Timestamp) {
+          final dt = raw.toDate();
+          final diff = DateTime.now().difference(dt);
+          if (diff.inMinutes < 1) {
+            timeStr = 'Just now';
+          } else if (diff.inHours < 1) {
+            timeStr = '${diff.inMinutes}m ago';
+          } else if (diff.inDays < 1) {
+            timeStr = '${diff.inHours}h ago';
+          } else {
+            timeStr = '${diff.inDays}d ago';
+          }
+        } else if (raw is String) {
+          timeStr = raw;
+        }
         return {
           ...data,
           'icon': _getIconData(data['icon'] as String?),
+          'time': timeStr,
+          'isNew': !(data['read'] as bool? ?? false),
         };
       }).toList();
       notifyListeners();

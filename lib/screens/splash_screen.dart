@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               Container(
                 width: 120,
                 height: 120,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(
                     Icons.fitness_center_rounded,
                     size: 60,

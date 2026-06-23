@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/fitness_service.dart';
+import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
 
 class NotificationsScreen extends StatelessWidget {
@@ -8,6 +9,7 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeService>();
     final fitnessData = context.watch<FitnessService>();
     final notifications = fitnessData.notifications;
 
@@ -85,7 +87,7 @@ class _NotificationItem extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppTheme.surfaceLight,
               shape: BoxShape.circle,
             ),
@@ -108,7 +110,7 @@ class _NotificationItem extends StatelessWidget {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppTheme.accent,
                           shape: BoxShape.circle,
                         ),

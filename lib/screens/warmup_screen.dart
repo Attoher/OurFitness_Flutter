@@ -32,8 +32,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
   void initState() {
     super.initState();
     _startTimer();
-    
-    // Video initialization
+
     _videoController = VideoPlayerController.asset('assets/videos/jumping_jack.mp4')
       ..initialize().then((_) {
         setState(() {});
@@ -70,10 +69,10 @@ class _WarmupScreenState extends State<WarmupScreen> {
     setState(() => _isPlaying = !_isPlaying);
     if (_isPlaying) {
       _startTimer();
-      _videoController.play(); 
+      _videoController.play();
     } else {
       _timer?.cancel();
-      _videoController.pause(); 
+      _videoController.pause();
     }
   }
 
@@ -99,8 +98,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  double get _progress =>
-      1 - (_remainingSeconds / _totalSeconds);
+  double get _progress => 1 - (_remainingSeconds / _totalSeconds);
 
   @override
   Widget build(BuildContext context) {
@@ -159,12 +157,12 @@ class _WarmupScreenState extends State<WarmupScreen> {
                 child: LinearProgressIndicator(
                   value: _progress,
                   backgroundColor: AppTheme.surfaceLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accent),
                   minHeight: 3,
                 ),
               ),
             ),
-            // Video placeholder
+            // Video area
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -173,12 +171,12 @@ class _WarmupScreenState extends State<WarmupScreen> {
                   child: Container(
                     color: const Color(0xFFD4C9B0),
                     width: double.infinity,
-                    height: double.infinity, 
+                    height: double.infinity,
                     child: _videoController.value.hasError
-                        ? const Center(
+                        ? Center(
                             child: Icon(
-                              Icons.accessibility_new_rounded, 
-                              size: 80, 
+                              Icons.accessibility_new_rounded,
+                              size: 80,
                               color: AppTheme.accent,
                             ),
                           )
@@ -191,7 +189,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
                                   child: VideoPlayer(_videoController),
                                 ),
                               )
-                            : const Center(
+                            : Center(
                                 child: CircularProgressIndicator(color: AppTheme.accent),
                               ),
                   ),
@@ -233,7 +231,7 @@ class _WarmupScreenState extends State<WarmupScreen> {
                         child: Container(
                           width: 64,
                           height: 64,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppTheme.accent,
                             shape: BoxShape.circle,
                           ),
@@ -287,7 +285,7 @@ class _ControlButton extends StatelessWidget {
       child: Container(
         width: 48,
         height: 48,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surface,
           shape: BoxShape.circle,
         ),

@@ -3,18 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/main_scaffold.dart';
 import 'screens/login_screen.dart';
 import 'services/fitness_service.dart';
 import 'services/auth_service.dart';
+import 'services/location_service.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase (wrapped in try-catch for cases where config is missing)
+
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   } catch (e) {
@@ -33,6 +33,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => FitnessService()),
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => LocationService()),
+        ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: const OurFitnessApp(),
     ),
@@ -44,11 +46,12 @@ class OurFitnessApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeService = context.watch<ThemeService>();
     return MaterialApp(
       title: 'OurFitness',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const SplashScreen(), 
+      theme: themeService.buildMaterialTheme(),
+      home: const SplashScreen(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
         '/auth': (context) => const AuthWrapper(),
@@ -65,8 +68,6 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
-    
-    // If user is authenticated, show Home, else Login
     if (authService.isAuthenticated) {
       return const MainScaffold();
     } else {

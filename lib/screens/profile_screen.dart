@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/fitness_service.dart';
 import '../services/auth_service.dart';
+import '../services/theme_service.dart';
+import 'social_screen.dart';
+import 'diet_screen.dart';
+import 'tutorial_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -68,7 +72,7 @@ class ProfileScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(Icons.person_rounded, size: 32, color: AppTheme.accent),
               ),
             ),
@@ -145,7 +149,7 @@ class ProfileScreen extends StatelessWidget {
                       if (fitness.isDeviceConnected)
                         Row(
                           children: [
-                            const Icon(Icons.battery_4_bar_rounded, color: AppTheme.accent, size: 14),
+                            Icon(Icons.battery_4_bar_rounded, color: AppTheme.accent, size: 14),
                             const SizedBox(width: 4),
                             Text('${fitness.batteryLevel}%', style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.accent, fontSize: 11,
@@ -230,7 +234,7 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
@@ -277,7 +281,37 @@ class ProfileScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Tema ────────────────────────────────────────────────────────
+          _ThemePicker(),
+          const SizedBox(height: 14),
+          // ── Fitur Baru ──────────────────────────────────────────────────
+          _OptionTile(
+            icon: Icons.group_rounded,
+            label: 'Komunitas',
+            subtitle: 'Teman, tantangan & leaderboard',
+            color: Colors.greenAccent,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialScreen())),
+          ),
+          const SizedBox(height: 10),
+          _OptionTile(
+            icon: Icons.restaurant_menu_rounded,
+            label: 'Diet & Nutrisi',
+            subtitle: 'Panduan gizi dan pola makan sehat',
+            color: Colors.orange,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DietScreen())),
+          ),
+          const SizedBox(height: 10),
+          _OptionTile(
+            icon: Icons.menu_book_rounded,
+            label: 'Panduan Aplikasi',
+            subtitle: 'Tutorial fitur OurFitness',
+            color: Colors.lightBlue,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorialScreen())),
+          ),
+          const SizedBox(height: 14),
+          // ── Akun ────────────────────────────────────────────────────────
           _OptionTile(
             icon: Icons.person_outline_rounded,
             label: 'Edit Personal Details',
@@ -293,6 +327,7 @@ class ProfileScreen extends StatelessWidget {
           _OptionTile(
             icon: Icons.logout_rounded,
             label: 'Sign Out',
+            color: Colors.redAccent,
             onTap: () async {
               final auth = context.read<AuthService>();
               await auth.signOut();
@@ -372,8 +407,8 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icon(isHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: AppTheme.textSecondary),
                   onPressed: toggle,
                 ),
-                enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
               ),
             );
           }
@@ -431,8 +466,8 @@ class ProfileScreen extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppTheme.textSecondary),
-        enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.surfaceLight), borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.accent), borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -526,12 +561,21 @@ class _GoalItem extends StatelessWidget {
 class _OptionTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? subtitle;
+  final Color? color;
   final VoidCallback? onTap;
 
-  const _OptionTile({required this.icon, required this.label, this.onTap});
+  const _OptionTile({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.color,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? AppTheme.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -542,14 +586,120 @@ class _OptionTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.textSecondary, size: 20),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.titleMedium),
+                  if (subtitle != null)
+                    Text(subtitle!,
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 11)),
+                ],
+              ),
             ),
             const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 20),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ThemePicker extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final themeService = context.watch<ThemeService>();
+    final current = themeService.currentIndex;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: themeService.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.palette_rounded, color: themeService.accent, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tema Aplikasi',
+                        style: TextStyle(
+                            color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text('Pilih warna tema favoritmu',
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(ThemeService.presets.length, (i) {
+              final preset = ThemeService.presets[i];
+              final isSelected = current == i;
+              return GestureDetector(
+                onTap: () => themeService.setTheme(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isSelected ? 52 : 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: preset.accent,
+                    borderRadius: BorderRadius.circular(isSelected ? 14 : 22),
+                    border: isSelected
+                        ? Border.all(color: Colors.white, width: 2.5)
+                        : null,
+                    boxShadow: isSelected
+                        ? [BoxShadow(color: preset.accent.withValues(alpha: 0.5), blurRadius: 10)]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                      : Center(
+                          child: Text(preset.emoji,
+                              style: const TextStyle(fontSize: 16)),
+                        ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              ThemeService.presets[current].name,
+              style: TextStyle(
+                  color: themeService.accent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

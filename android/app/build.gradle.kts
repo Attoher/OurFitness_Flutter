@@ -29,6 +29,15 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         multiDexEnabled = true
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            excludes += listOf("lib/*/libVkLayer_khronos_validation.so")
+        }
     }
 
     buildTypes {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/activity_rings.dart';
 import '../services/fitness_service.dart';
+import '../services/theme_service.dart';
 import 'notifications_screen.dart';
 import 'sport_selection_screen.dart';
 import '../widgets/week_day_strip.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeService>();
     final fitnessData = context.watch<FitnessService>();
     final authService = context.watch<AuthService>();
     final user = authService.user;
@@ -108,7 +110,7 @@ class HomeScreen extends StatelessWidget {
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppTheme.accent,
                         shape: BoxShape.circle,
                       ),
@@ -147,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 child: Text(
                   '$streak weeks',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

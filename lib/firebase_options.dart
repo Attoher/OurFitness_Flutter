@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -50,19 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDQZ_7ipkCaxzHaa7v7R_tjJdsGhi3tpy0',
-    appId: '1:1089671119809:android:ac975c892e8f53181de540',
-    messagingSenderId: '1089671119809',
-    projectId: 'our-fitness-24808',
-    storageBucket: 'our-fitness-24808.firebasestorage.app',
+    apiKey: 'AIzaSyCRuyOfGsqCUEwJSuiG9Ic6z_wBxxgivXU',
+    appId: '1:1062587374774:android:0cc5e1a3780bed02229a17',
+    messagingSenderId: '1062587374774',
+    projectId: 'ourfitness-e3b7c',
+    storageBucket: 'ourfitness-e3b7c.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCu5C9qjymtyTAnHjG8icG4aKXR_l9-X0Q',
-    appId: '1:1089671119809:ios:d30406ad31b0b5d31de540',
-    messagingSenderId: '1089671119809',
-    projectId: 'our-fitness-24808',
-    storageBucket: 'our-fitness-24808.firebasestorage.app',
-    iosBundleId: 'com.hanaazizah.ourfitness',
+    apiKey: 'AIzaSyB4kspAMmO17xIQM0eehRJQJq5OLSllVgc',
+    appId: '1:1062587374774:ios:3e45ad9777b28413229a17',
+    messagingSenderId: '1062587374774',
+    projectId: 'ourfitness-e3b7c',
+    storageBucket: 'ourfitness-e3b7c.firebasestorage.app',
+    iosBundleId: 'com.example.imkOurfitness',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDN3cm_CvenEkiM4YzBMEdKaFkZm74ZfPU',
+    appId: '1:1062587374774:web:5b83293201a11be2229a17',
+    messagingSenderId: '1062587374774',
+    projectId: 'ourfitness-e3b7c',
+    authDomain: 'ourfitness-e3b7c.firebaseapp.com',
+    storageBucket: 'ourfitness-e3b7c.firebasestorage.app',
+    measurementId: 'G-0KQKVZR4G8',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyB4kspAMmO17xIQM0eehRJQJq5OLSllVgc',
+    appId: '1:1062587374774:ios:3e45ad9777b28413229a17',
+    messagingSenderId: '1062587374774',
+    projectId: 'ourfitness-e3b7c',
+    storageBucket: 'ourfitness-e3b7c.firebasestorage.app',
+    iosBundleId: 'com.example.imkOurfitness',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDN3cm_CvenEkiM4YzBMEdKaFkZm74ZfPU',
+    appId: '1:1062587374774:web:cf0b67e809ee66f5229a17',
+    messagingSenderId: '1062587374774',
+    projectId: 'ourfitness-e3b7c',
+    authDomain: 'ourfitness-e3b7c.firebaseapp.com',
+    storageBucket: 'ourfitness-e3b7c.firebasestorage.app',
+    measurementId: 'G-D976JXEX2F',
+  );
+
 }

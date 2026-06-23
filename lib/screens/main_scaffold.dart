@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/fitness_service.dart';
+import '../services/theme_service.dart';
 import 'home_screen.dart';
 import 'gamification_screen.dart';
 import 'statistics_screen.dart';
@@ -112,6 +113,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeService>(); // rebuild on theme change
     final navBarHeight = 72 + MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -353,8 +355,8 @@ class _OurFitnessNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 72 + MediaQuery.of(context).padding.bottom,
-      decoration: const BoxDecoration(
-        color: Color(0xFF141414),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
         border: Border(
           top: BorderSide(color: AppTheme.surfaceLight, width: 0.5),
         ),

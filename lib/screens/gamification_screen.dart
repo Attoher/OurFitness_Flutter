@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/fitness_service.dart';
+import '../services/theme_service.dart';
 
 class GamificationScreen extends StatelessWidget {
   const GamificationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeService>();
     final fitnessData = context.watch<FitnessService>();
     
     return Scaffold(
@@ -42,7 +44,7 @@ class GamificationScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Level ${data.level}',
-                    style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   Text(
                     '${data.xp}/${data.xpNextLevel} XP',
@@ -63,7 +65,7 @@ class GamificationScreen extends StatelessWidget {
             child: LinearProgressIndicator(
               value: data.levelProgress,
               backgroundColor: AppTheme.surface,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accent),
               minHeight: 4,
             ),
           ),
@@ -93,10 +95,10 @@ class GamificationScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.local_fire_department_rounded, color: AppTheme.background, size: 16),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Text(
                       'Current Streak',
                       style: TextStyle(
@@ -110,7 +112,7 @@ class GamificationScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   '${data.streak} Weeks',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.background,
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
@@ -134,7 +136,7 @@ class GamificationScreen extends StatelessWidget {
                 color: AppTheme.background.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(Icons.workspace_premium_rounded, color: AppTheme.accent, size: 40),
               ),
             ),
@@ -720,7 +722,7 @@ class _ChallengeCard extends StatelessWidget {
               ),
               Text(
                 '${(progress * 100).toInt()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.accent,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -738,7 +740,7 @@ class _ChallengeCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: AppTheme.surfaceLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accent),
               minHeight: 6,
             ),
           ),

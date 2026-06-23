@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/fitness_service.dart';
+import '../services/theme_service.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -30,6 +31,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeService>();
     final data = context.watch<FitnessService>();
     final todayIdx = DateTime.now().weekday - 1;
 

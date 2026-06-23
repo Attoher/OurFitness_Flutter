@@ -55,9 +55,9 @@ class _SportSelectionSheetState extends State<SportSelectionSheet> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -221,7 +221,7 @@ class _SportTile extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle_rounded, color: AppTheme.accent, size: 20),
+              Icon(Icons.check_circle_rounded, color: AppTheme.accent, size: 20),
           ],
         ),
       ),

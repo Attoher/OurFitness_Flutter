@@ -1,21 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
+import '../services/location_service.dart';
+import '../services/theme_service.dart';
 import 'warmup_screen.dart';
 import 'running_tracker_screen.dart';
 
 IconData _iconFromName(String name) {
   switch (name) {
-    case 'directions_run': return Icons.directions_run_rounded;
-    case 'two_wheeler': return Icons.two_wheeler_rounded;
-    case 'pool': return Icons.pool_rounded;
-    case 'directions_walk': return Icons.directions_walk_rounded;
-    case 'bolt': return Icons.bolt_rounded;
-    case 'fitness_center': return Icons.fitness_center_rounded;
-    case 'sports_gymnastics': return Icons.sports_gymnastics_rounded;
-    case 'self_improvement': return Icons.self_improvement_rounded;
-    case 'local_fire_department': return Icons.local_fire_department_rounded;
-    default: return Icons.sports_rounded;
+    case 'directions_run':
+      return Icons.directions_run_rounded;
+    case 'two_wheeler':
+      return Icons.two_wheeler_rounded;
+    case 'pool':
+      return Icons.pool_rounded;
+    case 'directions_walk':
+      return Icons.directions_walk_rounded;
+    case 'bolt':
+      return Icons.bolt_rounded;
+    case 'fitness_center':
+      return Icons.fitness_center_rounded;
+    case 'sports_gymnastics':
+      return Icons.sports_gymnastics_rounded;
+    case 'self_improvement':
+      return Icons.self_improvement_rounded;
+    case 'local_fire_department':
+      return Icons.local_fire_department_rounded;
+    default:
+      return Icons.sports_rounded;
   }
 }
 
@@ -29,18 +44,46 @@ class ActivityPreviewScreen extends StatefulWidget {
 }
 
 class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
-  bool _gpsReady = false;
+  final _mapController = MapController();
+  LocationService? _locationService;
+
+  static const _defaultCenter = LatLng(-7.2756, 112.7947);
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _gpsReady = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _locationService = context.read<LocationService>();
+      _locationService!.addListener(_onLocationUpdate);
+      _locationService!.fetchCurrentPosition();
     });
+  }
+
+  void _onLocationUpdate() {
+    if (!mounted) return;
+    setState(() {});
+    final pos = _locationService?.currentPosition;
+    if (pos != null) {
+      _mapController.move(LatLng(pos.latitude, pos.longitude), 16);
+    }
+  }
+
+  @override
+  void dispose() {
+    _locationService?.removeListener(_onLocationUpdate);
+    super.dispose();
+  }
+
+  bool get _gpsReady => _locationService?.currentPosition != null;
+
+  LatLng get _mapCenter {
+    final pos = _locationService?.currentPosition;
+    return pos != null ? LatLng(pos.latitude, pos.longitude) : _defaultCenter;
   }
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.watch<ThemeService>().accent;
     final sportIcon = _iconFromName(widget.sport.icon);
     final isCardio = widget.sport.category == 'CARDIO';
 
@@ -48,15 +91,46 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          // Map area (top, expandable)
           Expanded(
             child: Stack(
               children: [
-                // Map fills the full expanded area
-                Positioned.fill(child: _ItsPreviewMap()),
-                // Gradient fade at bottom of map
+                // OpenStreetMap via flutter_map
+                Positioned.fill(
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _mapCenter,
+                      initialZoom: 16,
+                      minZoom: 10,
+                      maxZoom: 19,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
+                        userAgentPackageName: 'com.example.imk_ourfitness',
+                        maxZoom: 19,
+                      ),
+                      if (_gpsReady)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _mapCenter,
+                              width: 24,
+                              height: 24,
+                              child: _LocationDot(color: accent),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                // Gradient fade at bottom
                 Positioned(
-                  bottom: 0, left: 0, right: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
                   height: 120,
                   child: Container(
                     decoration: BoxDecoration(
@@ -71,7 +145,7 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                     ),
                   ),
                 ),
-                // Top bar (close + GPS)
+                // Top bar
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -80,12 +154,17 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
-                            width: 40, height: 40,
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
-                              color: AppTheme.background.withValues(alpha: 0.8),
+                              color: AppTheme.background.withValues(alpha: 0.85),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close_rounded, color: AppTheme.textPrimary, size: 20),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: AppTheme.textPrimary,
+                              size: 20,
+                            ),
                           ),
                         ),
                         const Spacer(),
@@ -93,7 +172,7 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                           duration: const Duration(milliseconds: 400),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppTheme.background.withValues(alpha: 0.8),
+                            color: AppTheme.background.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -123,7 +202,7 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
               ],
             ),
           ),
-          // Bottom panel (fixed height, no Positioned needed)
+          // Bottom panel
           Container(
             color: AppTheme.background,
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -133,17 +212,17 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Sport info row
                   Row(
                     children: [
                       Container(
-                        width: 52, height: 52,
+                        width: 52,
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: AppTheme.accent.withValues(alpha: 0.15),
+                          color: accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                          border: Border.all(color: accent.withValues(alpha: 0.3)),
                         ),
-                        child: Icon(sportIcon, color: AppTheme.accent, size: 26),
+                        child: Icon(sportIcon, color: accent, size: 26),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -160,7 +239,8 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                             ),
                             Text(
                               widget.sport.category,
-                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13),
                             ),
                           ],
                         ),
@@ -185,29 +265,30 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // Start button
                   SizedBox(
                     width: double.infinity,
                     height: 58,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => WarmupScreen(sport: widget.sport)),
+                        MaterialPageRoute(
+                            builder: (_) => WarmupScreen(sport: widget.sport)),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: accent,
+                        foregroundColor: ThemeService.isLightColor(accent) ? Colors.black : Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.play_arrow_rounded, size: 28, color: Colors.black),
+                          Icon(Icons.play_arrow_rounded, size: 28),
                           SizedBox(width: 8),
                           Text(
                             'Start Activity',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
@@ -218,7 +299,8 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
                     child: GestureDetector(
                       onTap: () => Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => RunningTrackerScreen(sport: widget.sport)),
+                        MaterialPageRoute(
+                            builder: (_) => RunningTrackerScreen(sport: widget.sport)),
                       ),
                       child: const Text(
                         'Skip warmup',
@@ -242,91 +324,65 @@ class _ActivityPreviewScreenState extends State<ActivityPreviewScreen> {
   }
 }
 
-class _ItsPreviewMap extends StatelessWidget {
+class _LocationDot extends StatefulWidget {
+  final Color color;
+
+  const _LocationDot({required this.color});
+
+  @override
+  State<_LocationDot> createState() => _LocationDotState();
+}
+
+class _LocationDotState extends State<_LocationDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF141D2C),
-      child: Stack(
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, __) => Stack(
+        alignment: Alignment.center,
         children: [
-          Positioned.fill(child: CustomPaint(painter: _PreviewGridPainter())),
-          const Positioned(
-            top: 120, left: 80,
-            child: _MapLabel(text: 'Perpustakaan ITS'),
+          Container(
+            width: 24 * _pulse.value,
+            height: 24 * _pulse.value,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color.withValues(alpha: 0.25 * _pulse.value),
+            ),
           ),
-          const Positioned(
-            top: 220, right: 60,
-            child: _MapLabel(text: 'Taman Sepuluh Nopember'),
-          ),
-          const Positioned(
-            bottom: 100, left: 50,
-            child: _MapLabel(text: 'BAAK ITS', highlight: true),
-          ),
-          const Positioned(
-            bottom: 60, right: 40,
-            child: _MapLabel(text: 'Titik Nol ITS', highlight: true),
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 6),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-}
-
-class _MapLabel extends StatelessWidget {
-  final String text;
-  final bool highlight;
-
-  const _MapLabel({required this.text, this.highlight = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: highlight
-            ? AppTheme.accent.withValues(alpha: 0.7)
-            : Colors.grey.withValues(alpha: 0.4),
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _PreviewGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final thin = Paint()
-      ..color = const Color(0xFF34495E).withValues(alpha: 0.2)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    final thick = Paint()
-      ..color = const Color(0xFF2C3E50).withValues(alpha: 0.3)
-      ..strokeWidth = 10
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, 110)
-        ..lineTo(size.width, 160)
-        ..moveTo(110, 0)
-        ..lineTo(130, size.height)
-        ..moveTo(size.width * 0.7, 0)
-        ..lineTo(size.width * 0.8, size.height),
-      thin,
-    );
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width * 0.2, 0)
-        ..quadraticBezierTo(size.width * 0.5, size.height * 0.5, size.width * 0.8, size.height)
-        ..moveTo(0, size.height * 0.7)
-        ..lineTo(size.width, size.height * 0.6),
-      thick,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
 }
