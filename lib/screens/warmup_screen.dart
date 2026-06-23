@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import 'running_tracker_screen.dart';
@@ -22,11 +24,72 @@ class _WarmupScreenState extends State<WarmupScreen> {
   int _currentPhase = 0;
   late VideoPlayerController _videoController;
 
-  final List<Map<String, String>> _phases = [
+  static const _sportPhases = <String, List<Map<String, String>>>{
+    'Running': [
+      {'phase': 'Leg Swing & Ankle Roll', 'step': '1/3'},
+      {'phase': 'High Knees & Butt Kicks', 'step': '2/3'},
+      {'phase': 'Hip Circle & Sprint Drill', 'step': '3/3'},
+    ],
+    'Cycling': [
+      {'phase': 'Neck & Shoulder Roll', 'step': '1/3'},
+      {'phase': 'Hip Flexor Stretch', 'step': '2/3'},
+      {'phase': 'Quad Activation', 'step': '3/3'},
+    ],
+    'Swimming': [
+      {'phase': 'Arm Circle & Shoulder Stretch', 'step': '1/3'},
+      {'phase': 'Torso Rotation', 'step': '2/3'},
+      {'phase': 'Leg Kick Activation', 'step': '3/3'},
+    ],
+    'Walking': [
+      {'phase': 'Calf Stretch & Ankle Flex', 'step': '1/3'},
+      {'phase': 'Hamstring Mobilization', 'step': '2/3'},
+      {'phase': 'Hip Opener', 'step': '3/3'},
+    ],
+    'Treadmill': [
+      {'phase': 'Calf Raise & Ankle Roll', 'step': '1/3'},
+      {'phase': 'Quad & Hamstring Stretch', 'step': '2/3'},
+      {'phase': 'Power Walk Activation', 'step': '3/3'},
+    ],
+    'HIIT': [
+      {'phase': 'Joint Mobilization', 'step': '1/3'},
+      {'phase': 'Dynamic Stretch', 'step': '2/3'},
+      {'phase': 'Explosive Activation', 'step': '3/3'},
+    ],
+    'Weight Training': [
+      {'phase': 'Shoulder & Wrist Circles', 'step': '1/3'},
+      {'phase': 'Thoracic Spine Rotation', 'step': '2/3'},
+      {'phase': 'Glute & Core Activation', 'step': '3/3'},
+    ],
+    'Bodyweight (Calisthenics)': [
+      {'phase': 'Full Body Mobility Flow', 'step': '1/3'},
+      {'phase': 'Scapular Push-up Prep', 'step': '2/3'},
+      {'phase': 'Core & Hip Activation', 'step': '3/3'},
+    ],
+    'Pilates': [
+      {'phase': 'Spine Articulation', 'step': '1/3'},
+      {'phase': 'Pelvic Floor Awareness', 'step': '2/3'},
+      {'phase': 'Breath & Core Connect', 'step': '3/3'},
+    ],
+    'Yoga': [
+      {'phase': 'Child Pose & Cat-Cow', 'step': '1/3'},
+      {'phase': 'Sun Salutation Flow', 'step': '2/3'},
+      {'phase': 'Warrior Prep Stretch', 'step': '3/3'},
+    ],
+    'CrossFit': [
+      {'phase': 'Burpee & Jump Prep', 'step': '1/3'},
+      {'phase': 'Overhead Shoulder Warm-up', 'step': '2/3'},
+      {'phase': 'Posterior Chain Activation', 'step': '3/3'},
+    ],
+  };
+
+  static const _defaultPhases = <Map<String, String>>[
     {'phase': 'Phase 1: Mobilization', 'step': '1/3'},
     {'phase': 'Phase 2: Dynamic Stretch', 'step': '2/3'},
     {'phase': 'Phase 3: Activation', 'step': '3/3'},
   ];
+
+  List<Map<String, String>> get _phases =>
+      _sportPhases[widget.sport.name] ?? _defaultPhases;
 
   @override
   void initState() {
@@ -46,9 +109,11 @@ class _WarmupScreenState extends State<WarmupScreen> {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_remainingSeconds <= 0) {
+        HapticFeedback.mediumImpact();
         _nextPhase();
       } else {
         setState(() => _remainingSeconds--);
+        if (_remainingSeconds <= 5) HapticFeedback.lightImpact();
       }
     });
   }
@@ -196,21 +261,51 @@ class _WarmupScreenState extends State<WarmupScreen> {
                 ),
               ),
             ),
-            // Timer
+            // Timer with circular ring
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 28),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 children: [
-                  Text(
-                    _formattedTime,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 56,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 2,
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Ring painter
+                        CustomPaint(
+                          size: const Size(140, 140),
+                          painter: _CountdownRingPainter(
+                            progress: _progress,
+                            color: AppTheme.accent,
+                          ),
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _formattedTime,
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 40,
+                                fontWeight: FontWeight.w300,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            Text(
+                              'sec',
+                              style: TextStyle(
+                                color: AppTheme.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -293,4 +388,60 @@ class _ControlButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CountdownRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  const _CountdownRingPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+    const strokeWidth = 6.0;
+
+    // Track
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = color.withValues(alpha: 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+
+    if (progress <= 0) return;
+
+    // Glow
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      Paint()
+        ..color = color.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth + 4
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    // Progress arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CountdownRingPainter old) => old.progress != progress;
 }

@@ -12,13 +12,18 @@ class AppTheme {
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8A8A8A);
   static const Color textMuted = Color(0xFF555555);
-  static const Color ringSteps = Color(0xFF4CD8D8);
-  static const Color ringMove = Color(0xFF7B5FDB);
-  static const Color heartRate = Color(0xFFFF5C5C);
-  static const Color strength = Color(0xFF4CD8D8);
 
-  // Aliases that follow the accent color
-  static Color get ringCalories => accent;
+  // Semantic metric colors — always fixed, context-driven
+  static const Color ringCalories = Color(0xFFFF6B35); // fire/energy = orange
+  static const Color ringSteps    = Color(0xFF4CD8D8); // movement = teal
+  static const Color ringMove     = Color(0xFF7B5FDB); // active = purple
+  static const Color heartRate    = Color(0xFFFF5C5C); // health = red
+  static const Color streakOrange = Color(0xFFFF9A3C); // streak/fire = amber-orange
+  static const Color sleepBlue    = Color(0xFF5B9CF6); // rest/sleep = blue
+  static const Color xpGold       = Color(0xFFFFB800); // achievement = gold
+  static const Color strength     = Color(0xFF4CD8D8);
+
+  // Accent alias (used for brand-colored UI, changes with theme)
   static Color get cardio => accent;
 
   static void applyPreset({

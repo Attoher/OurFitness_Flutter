@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/fitness_service.dart';
@@ -377,22 +378,7 @@ class _OurFitnessNavBar extends StatelessWidget {
               onTap: () => onTap(1),
             ),
             // Center Running Button
-            GestureDetector(
-              onTap: () => onTap(2),
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2C2C2E),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.directions_run_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-            ),
+            _CenterRunButton(onTap: () => onTap(2)),
             _NavItem(
               icon: Icons.insert_chart_outlined_rounded,
               isActive: currentIndex == 3,
@@ -410,7 +396,77 @@ class _OurFitnessNavBar extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _CenterRunButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _CenterRunButton({required this.onTap});
+
+  @override
+  State<_CenterRunButton> createState() => _CenterRunButtonState();
+}
+
+class _CenterRunButtonState extends State<_CenterRunButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 300),
+    );
+    _scale = Tween(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut, reverseCurve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        HapticFeedback.mediumImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppTheme.accent,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accent.withValues(alpha: 0.4),
+                blurRadius: 14,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.directions_run_rounded,
+            color: ThemeService.isLightColor(AppTheme.accent) ? Colors.black : Colors.white,
+            size: 26,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatefulWidget {
   final IconData icon;
   final bool isActive;
   final VoidCallback onTap;
@@ -422,19 +478,74 @@ class _NavItem extends StatelessWidget {
   });
 
   @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 1.28).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
+    );
+    if (widget.isActive) _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_NavItem old) {
+    super.didUpdateWidget(old);
+    if (!old.isActive && widget.isActive) {
+      _ctrl.forward(from: 0);
+      HapticFeedback.selectionClick();
+    } else if (old.isActive && !widget.isActive) {
+      _ctrl.animateTo(0, duration: const Duration(milliseconds: 150));
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 48,
         height: 56,
-        child: Center(
-          child: Icon(
-            icon,
-            size: 26,
-            color: isActive ? AppTheme.accent : const Color(0xFF555555),
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleTransition(
+              scale: _scale,
+              child: Icon(
+                widget.icon,
+                size: 26,
+                color: widget.isActive ? AppTheme.accent : const Color(0xFF555555),
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: widget.isActive ? 4 : 0,
+              height: widget.isActive ? 4 : 0,
+              decoration: BoxDecoration(
+                color: AppTheme.accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -38,35 +38,56 @@ class GamificationScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Achievements', style: Theme.of(context).textTheme.displaySmall),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Level ${data.level}',
-                    style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  Text(
-                    '${data.xp}/${data.xpNextLevel} XP',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
-                  ),
-                ],
+              Text('Pencapaian', style: Theme.of(context).textTheme.displaySmall),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.xpGold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.xpGold.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppTheme.xpGold, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Level ${data.level}',
+                          style: const TextStyle(color: AppTheme.xpGold, fontWeight: FontWeight.w800, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${data.xp}/${data.xpNextLevel} XP',
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            'Keep pushing your limits!',
+            'Terus dorong batasmu!',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: data.levelProgress,
-              backgroundColor: AppTheme.surface,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accent),
-              minHeight: 4,
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey(data.levelProgress),
+              tween: Tween(begin: 0.0, end: data.levelProgress),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              builder: (_, val, __) => LinearProgressIndicator(
+                value: val,
+                backgroundColor: AppTheme.surface,
+                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.xpGold),
+                minHeight: 6,
+              ),
             ),
           ),
         ],
@@ -80,64 +101,64 @@ class GamificationScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.accent.withValues(alpha: 0.9),
-              AppTheme.accentDark,
-            ],
+          gradient: const LinearGradient(
+            colors: [AppTheme.streakOrange, Color(0xFFFF6D00)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.streakOrange.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.local_fire_department_rounded, color: AppTheme.background, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Current Streak',
-                      style: TextStyle(
-                        color: AppTheme.background,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Streak Saat Ini',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(data.streak),
+                    tween: Tween(begin: 0, end: data.streak.toDouble()),
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, val, __) => Text(
+                      '${val.toInt()} Hari',
+                      style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800, height: 1),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${data.streak} Weeks',
-                  style: TextStyle(
-                    color: AppTheme.background,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${data.streak * 7} days in a row!',
-                  style: TextStyle(
-                    color: AppTheme.background.withValues(alpha: 0.7),
-                    fontSize: 12,
+                  const SizedBox(height: 6),
+                  Text(
+                    data.streak > 0 ? 'Berturut-turut tanpa absen! 🔥' : 'Mulai streak pertamamu hari ini!',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const Spacer(),
             Container(
-              width: 80,
-              height: 80,
+              width: 76,
+              height: 76,
               decoration: BoxDecoration(
-                color: AppTheme.background.withValues(alpha: 0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: Icon(Icons.workspace_premium_rounded, color: AppTheme.accent, size: 40),
+              child: const Center(
+                child: Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 40),
               ),
             ),
           ],

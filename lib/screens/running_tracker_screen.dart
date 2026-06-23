@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -65,12 +66,15 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
     setState(() => _isRunning = !_isRunning);
     if (_isRunning) {
       _locationService?.resumeTracking();
+      HapticFeedback.mediumImpact();
     } else {
       _locationService?.pauseTracking();
+      HapticFeedback.lightImpact();
     }
   }
 
   void _finishWorkout() {
+    HapticFeedback.heavyImpact();
     _timer?.cancel();
     _locationService?.removeListener(_onLocationUpdate);
     _locationService?.stopTracking();
@@ -99,6 +103,40 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
         onDone: () => Navigator.of(context)
           ..pop()
           ..pop(),
+      ),
+    );
+  }
+
+  void _cancelWorkout() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Batalkan Sesi?',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        content: const Text(
+          'Data workout tidak akan disimpan jika kamu keluar sekarang.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Lanjutkan', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              _timer?.cancel();
+              _locationService?.removeListener(_onLocationUpdate);
+              _locationService?.stopTracking();
+              Navigator.of(context)
+                ..pop()
+                ..pop();
+            },
+            child: const Text('Batalkan',
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700)),
+          ),
+        ],
       ),
     );
   }
@@ -177,7 +215,12 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
             _locationService!.currentPosition!.longitude)
         : null;
 
-    return Scaffold(
+    return PopScope(
+      canPop: _elapsedSeconds == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _cancelWorkout();
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
@@ -231,7 +274,13 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
                     child: Row(
                       children: [
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () {
+                            if (_elapsedSeconds > 0) {
+                              _cancelWorkout();
+                            } else {
+                              Navigator.pop(context);
+                            }
+                          },
                           child: Container(
                             width: 40,
                             height: 40,
@@ -434,7 +483,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

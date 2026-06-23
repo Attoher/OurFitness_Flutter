@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/fitness_service.dart';
+import '../utils/password_validator.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +19,85 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _isPasswordHidden = true;
+  String _passwordInput = '';
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailCtrl = TextEditingController(text: _emailController.text.trim());
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool sending = false;
+        return StatefulBuilder(builder: (ctx, setSt) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surface,
+            title: const Text('Reset Password', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Masukkan email Anda. Kami akan mengirim link reset password.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.surfaceLight),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.accent),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: sending
+                    ? null
+                    : () async {
+                        if (emailCtrl.text.trim().isEmpty) return;
+                        setSt(() => sending = true);
+                        final auth = context.read<AuthService>();
+                        final email = emailCtrl.text.trim();
+                        final err = await auth.resetPassword(email);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!ctx.mounted) return;
+                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                          content: Text(err ?? 'Link reset dikirim ke $email'),
+                          backgroundColor: err != null ? Colors.redAccent : Colors.green,
+                        ));
+                      },
+                child: sending
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Kirim'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
 
   Future<void> _submit() async {
     final auth = context.read<AuthService>();
@@ -136,12 +216,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     label: 'Password',
                     icon: Icons.lock_outline_rounded,
                     isPassword: true,
+                    onChanged: (v) => setState(() => _passwordInput = v),
                   ),
+                  if (!_isLogin && _passwordInput.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _PasswordStrengthBar(password: _passwordInput),
+                    ),
                   if (_isLogin)
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _showForgotPasswordDialog,
                         child: Text(
                           'Forgot Password?',
                           style: TextStyle(color: AppTheme.accent.withValues(alpha: 0.8), fontSize: 13),
@@ -212,6 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icon,
     bool isPassword = false,
     TextInputType? keyboardType,
+    ValueChanged<String>? onChanged,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -221,31 +308,110 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword ? _isPasswordHidden : false, 
+        obscureText: isPassword ? _isPasswordHidden : false,
         keyboardType: keyboardType,
+        onChanged: onChanged,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           prefixIcon: Icon(icon, color: AppTheme.accent.withValues(alpha: 0.7), size: 20),
-          suffixIcon: isPassword 
+          suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     _isPasswordHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                     color: AppTheme.textSecondary,
                     size: 20,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordHidden = !_isPasswordHidden;
-                    });
-                  },
+                  onPressed: () => setState(() => _isPasswordHidden = !_isPasswordHidden),
                 )
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
+    );
+  }
+}
+
+class _PasswordStrengthBar extends StatelessWidget {
+  final String password;
+  const _PasswordStrengthBar({required this.password});
+
+  @override
+  Widget build(BuildContext context) {
+    final checks = PasswordValidator.validateAll(password);
+    final passed = checks.values.where((v) => v).length;
+    final fraction = passed / checks.length;
+
+    Color barColor;
+    String label;
+    if (passed <= 1) {
+      barColor = Colors.redAccent;
+      label = 'Sangat Lemah';
+    } else if (passed == 2) {
+      barColor = Colors.orange;
+      label = 'Lemah';
+    } else if (passed == 3) {
+      barColor = Colors.yellow.shade700;
+      label = 'Cukup';
+    } else if (passed == 4) {
+      barColor = Colors.lightGreen;
+      label = 'Kuat';
+    } else {
+      barColor = Colors.green;
+      label = 'Sangat Kuat';
+    }
+
+    final criteria = [
+      ('Min. 8 karakter', checks['minLength']!),
+      ('Huruf besar', checks['uppercase']!),
+      ('Huruf kecil', checks['lowercase']!),
+      ('Angka', checks['digit']!),
+      ('Karakter spesial', checks['special']!),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: fraction,
+                  backgroundColor: AppTheme.surfaceLight,
+                  valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                  minHeight: 6,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(label, style: TextStyle(color: barColor, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: criteria.map((c) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                c.$2 ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                size: 12,
+                color: c.$2 ? Colors.green : AppTheme.textMuted,
+              ),
+              const SizedBox(width: 3),
+              Text(c.$1, style: TextStyle(
+                fontSize: 10,
+                color: c.$2 ? Colors.white70 : AppTheme.textMuted,
+              )),
+            ],
+          )).toList(),
+        ),
+      ],
     );
   }
 }

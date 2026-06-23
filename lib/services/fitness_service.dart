@@ -32,8 +32,10 @@ class FitnessService extends ChangeNotifier {
   int _xp = 0;
   int _xpNextLevel = 1000;
 
+  String _photoBase64 = '';
   List<Map<String, dynamic>> _badges = [];
   List<Map<String, dynamic>> _notifications = [];
+  List<Map<String, dynamic>> _recentWorkouts = [];
   Map<String, dynamic>? _pendingBadgeToast;
   List<double> _weeklySteps = List.filled(7, 0.0);
   List<double> _weeklyCalories = List.filled(7, 0.0);
@@ -59,7 +61,8 @@ class FitnessService extends ChangeNotifier {
 
   void _listenToUserData(String uid) {
     debugPrint('Listening to Firestore data for UID: $uid');
-    
+    _ensureSearchFields(uid);
+
     // Listen to User Profile
     _firestore.collection('users').doc(uid).snapshots().listen((doc) {
       if (doc.exists) {
@@ -69,6 +72,7 @@ class FitnessService extends ChangeNotifier {
         _age = data['age'] ?? _age;
         _height = (data['height'] as num?)?.toDouble() ?? _height;
         _weight = (data['weight'] as num?)?.toDouble() ?? _weight;
+        _photoBase64 = data['photoBase64'] as String? ?? _photoBase64;
         _streak = data['streak'] ?? _streak;
         _level = data['level'] ?? _level;
         _xp = data['xp'] ?? _xp;
@@ -143,9 +147,34 @@ class FitnessService extends ChangeNotifier {
         }
         return {
           ...data,
+          'id': doc.id,
+          'iconName': data['icon'] as String?,
           'icon': _getIconData(data['icon'] as String?),
           'time': timeStr,
+          'rawTime': raw is Timestamp ? raw.toDate() : null,
           'isNew': !(data['read'] as bool? ?? false),
+        };
+      }).toList();
+      notifyListeners();
+    });
+
+    // Listen to Recent Workouts
+    _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('workouts')
+        .orderBy('date', descending: true)
+        .limit(5)
+        .snapshots()
+        .listen((snapshot) {
+      _recentWorkouts = snapshot.docs.map((doc) {
+        final d = doc.data();
+        return {
+          'id': doc.id,
+          'date': d['date'],
+          'calories': d['calories'] ?? 0,
+          'steps': d['steps'] ?? 0,
+          'durationMinutes': d['durationMinutes'] ?? 0,
         };
       }).toList();
       notifyListeners();
@@ -170,9 +199,13 @@ class FitnessService extends ChangeNotifier {
 
   Future<void> _createInitialProfile(String uid) async {
     final name = _pendingRegistrationName ?? _auth.currentUser?.displayName ?? 'User';
+    final email = _auth.currentUser?.email ?? '';
     _pendingRegistrationName = null;
     await _firestore.collection('users').doc(uid).set({
       'displayName': name,
+      'searchKey': name.toLowerCase(),
+      'email': email,
+      'emailKey': email.toLowerCase(),
       'age': 21,
       'height': 160.0,
       'weight': 58.0,
@@ -204,8 +237,10 @@ class FitnessService extends ChangeNotifier {
 
     await _firestore.collection('users').doc(uid).collection('notifications').add({
       'icon': 'rocket_launch',
-      'title': 'Badge Unlocked: First Step',
-      'body': 'Welcome to OurFitness! You earned your first badge.',
+      'type': 'badge',
+      'badgeName': 'First Step',
+      'title': 'Lencana Baru: First Step',
+      'body': 'Selamat datang di OurFitness! Kamu baru saja membuka lencana pertamamu. Ini awal dari perjalanan kebugaranmu — teruskan dan kumpulkan lencana lainnya!',
       'time': FieldValue.serverTimestamp(),
       'read': false,
     });
@@ -302,6 +337,17 @@ class FitnessService extends ChangeNotifier {
     // no notifyListeners — caller already reacted
   }
 
+  Future<void> markNotificationRead(String notifId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(notifId)
+        .update({'read': true});
+  }
+
   // Methods to update data
   Future<void> updateGoals({int? stepsGoal, int? caloriesGoal, int? moveMinutesGoal}) async {
     final uid = _auth.currentUser?.uid;
@@ -315,12 +361,26 @@ class FitnessService extends ChangeNotifier {
     await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
   }
 
+  String get photoBase64 => _photoBase64;
+  List<Map<String, dynamic>> get recentWorkouts => _recentWorkouts;
+
+  Future<void> updatePhoto(String base64) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    _photoBase64 = base64;
+    notifyListeners();
+    await _firestore.collection('users').doc(uid).set({'photoBase64': base64}, SetOptions(merge: true));
+  }
+
   Future<void> updateProfile({String? name, int? age, double? height, double? weight}) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
     final updates = <String, dynamic>{};
-    if (name != null) updates['displayName'] = name;
+    if (name != null) {
+      updates['displayName'] = name;
+      updates['searchKey'] = name.toLowerCase();
+    }
     if (age != null) updates['age'] = age;
     if (height != null) updates['height'] = height;
     if (weight != null) updates['weight'] = weight;
@@ -404,6 +464,61 @@ class FitnessService extends ChangeNotifier {
       'durationMinutes': durationMinutes,
       'route': route,
     });
+
+    await _firestore.collection('users').doc(uid).collection('notifications').add({
+      'icon': 'directions_run',
+      'type': 'workout',
+      'calories': calories,
+      'steps': steps,
+      'duration': durationMinutes,
+      'distance': double.parse((steps / 1300).toStringAsFixed(2)),
+      'title': 'Workout Selesai!',
+      'body': 'Kerja bagus! Kamu menyelesaikan sesi selama $durationMinutes menit, membakar $calories kkal dan menempuh $steps langkah. Konsistensi seperti ini yang membuat perubahan nyata.',
+      'time': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+  }
+
+  Future<void> addInAppNotification({
+    required String icon,
+    required String title,
+    required String body,
+    String? type,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    await _firestore.collection('users').doc(uid).collection('notifications').add({
+      'icon': icon,
+      if (type != null) 'type': type,
+      'title': title,
+      'body': body,
+      'time': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+  }
+
+  /// Backfill search fields (email/emailKey/searchKey) for accounts created
+  /// before these fields existed, so friend-search by name OR email works.
+  Future<void> _ensureSearchFields(String uid) async {
+    try {
+      final email = _auth.currentUser?.email ?? '';
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final data = doc.data();
+      if (data == null) return;
+      final updates = <String, dynamic>{};
+      if (email.isNotEmpty && (data['emailKey'] == null || data['email'] == null)) {
+        updates['email'] = email;
+        updates['emailKey'] = email.toLowerCase();
+      }
+      if (data['searchKey'] == null && data['displayName'] is String) {
+        updates['searchKey'] = (data['displayName'] as String).toLowerCase();
+      }
+      if (updates.isNotEmpty) {
+        await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('ensureSearchFields error: $e');
+    }
   }
 
   Future<void> _fetchWeeklyStats(String uid) async {

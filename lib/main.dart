@@ -11,6 +11,7 @@ import 'services/fitness_service.dart';
 import 'services/auth_service.dart';
 import 'services/location_service.dart';
 import 'services/theme_service.dart';
+import 'services/social_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => LocationService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
+        ChangeNotifierProvider(create: (_) => SocialService()),
       ],
       child: const OurFitnessApp(),
     ),
